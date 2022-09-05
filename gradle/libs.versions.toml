@@ -1,0 +1,18 @@
+[versions]
+scala = "3.0.1"
+scalafmt = "2.7.5"
+
+[libraries]
+scala-library = { module = "org.scala-lang:scala3-library_3", version.ref = "scala" }
+scala-test = { module = "org.scalatest:scalatest_3", version = "3.2.9" }
+scala-junit = { module = "org.scalatestplus:junit-4-13_2.13", version = "3.2.2.0" }
+scala-xml = { module = "org.scala-lang.modules:scala-xml_2.13", version = "1.2.0" }
+
+[bundles]
+scala-test = ["scala-test", "scala-junit", "scala-xml"]
+
+[plugins]
+gradle-enterprise = { id = "com.gradle.enterprise", version = "3.10" }
+scoverage = { id = "org.scoverage", version = "7.0.1" }
+scalafmt = { id = "cz.alenkacz.gradle.scalafmt", version = "1.16.2"}
+spotless = { id = "com.diffplug.spotless", version = "5.0.0" }
