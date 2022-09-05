@@ -1,11 +1,8 @@
-# Introduzione
-Il tipo di dato principale in ZIO è `ZIO[R, E, A]`
-```scala
+package it.unibo.zio
+
 object Hello {
 
   def main(args: Array[String]): Unit = {
     println("Hello, world")
   }
 }
-
-```
