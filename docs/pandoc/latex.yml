@@ -1,0 +1,29 @@
+defaults:
+  - ./sections/index.yml
+
+# common configuration
+from: markdown
+table-of-contents: true
+toc-depth: 3
+number-sections: true
+top-level-division: chapter
+filters:
+  - pandoc-crossref
+
+metadata:
+  documentclass: scrartcl
+  title: ZIO
+  subtitle: PPS Report
+  lang: it-IT
+  author:
+    - Alberto Marfoglia
+  abstract: |
+    This is the abstract.
+  autoSectionLabels: true
+  chapters: false
+  classoption:
+    - oneside
+
+#
+output-file: PPSReport.pdf
+resource-path: ['./src']

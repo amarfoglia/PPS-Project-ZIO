@@ -6,7 +6,8 @@ on:
       - '.gitignore'
       - 'LICENSE'
       - 'README.md'
-  pull_request:
+
+permissions: write-all
 
 jobs:
   build:
@@ -16,12 +17,28 @@ jobs:
         uses: actions/checkout@v3
         with:
           - token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get current date
+          id: date
+          run: echo "::set-output name=date::$(date +'%d-%m-%Y')"
+
+      - name: Prepare environment
+        run: |
+          mkdir reports
+
+      - name: Generate PPS report PDF
+        uses: docker://pandoc/latex:2.18
+        with:
+          args: -d ./docs/pandoc/latex.yml -o reports/PPSReport.pdf -M date:${{steps.date.outputs.date}}
       - uses: DanySK/build-check-deploy-gradle-action@2.1.5
+
       - name: Upload Build
         uses: actions/upload-artifact@v3
         with:
-          - name: build
-          - path: ./*/build/libs/*.jar
+          - name: artifact
+          - path: |
+            ./*/build/libs/*.jar
+            reports
 
   release:
     needs:
@@ -35,7 +52,7 @@ jobs:
       - name: Download Build
         uses: actions/download-artifact@v3
         with:
-          name: build
+          name: artifact
       - name: Semantic Release
         uses: amarfoglia/semantic-release-action@v1.0
         with:

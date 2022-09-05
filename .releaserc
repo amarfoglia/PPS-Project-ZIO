@@ -115,7 +115,10 @@
       }
     ],
     ["@semantic-release/github", {
-      "assets":"*/build/libs/*.jar"
+      "assets": [
+        {"path": "*/build/libs/*.jar"},
+        {"path": "reports/*", "label": "PPSReport.pdf"}
+      ]
     }],
     "@semantic-release/git"
   ]
