@@ -1,12 +1,14 @@
 [versions]
 scala = "3.0.1"
 scalafmt = "2.7.5"
+zio = "2.0.2"
 
 [libraries]
 scala-library = { module = "org.scala-lang:scala3-library_3", version.ref = "scala" }
 scala-test = { module = "org.scalatest:scalatest_3", version = "3.2.9" }
 scala-junit = { module = "org.scalatestplus:junit-4-13_2.13", version = "3.2.2.0" }
 scala-xml = { module = "org.scala-lang.modules:scala-xml_2.13", version = "1.2.0" }
+zio = { module = "dev.zio:zio_3", version.ref = "zio" }
 
 [bundles]
 scala-test = ["scala-test", "scala-junit", "scala-xml"]

@@ -3,7 +3,7 @@ ZIO è una nuova libreria per la programmazione concorrente che si avvale delle 
 * **concorrenza**: ZIO è in grado di eseguire in maniera concorrente milioni di _thread_ virtuali tramite un modello asincrono _fiber-based_;
 * **efficienza**: ZIO cancella automaticamente computazioni il cui risultato non è più necessario;
 * **gestione errori**: ZIO consente di gestire staticamente gli errori, così che il compilatore possa segnalare le porzioni di codice che possono fallire ed in che modo (la tipologia di errore);
-* ***resource-safety***: ZIO gestisce automaticamente il ciclo di vita (acquisizione e rilascio) delle risorse anche in presenza di fallimenti inaspettati e in contesti di concorrenza;
+* ***resource-safety***: ZIO gestisce automaticamente il ciclo di vita (acquisizione e rilascio) delle risorse anche in presenza di fallimenti inaspettati e in contesti di concorrenza. Inoltre ZIO è _stack-safe_, quindi permette un ampi utilizzo della ricorsione.
 * ***streaming***: ZIO dispone di uno streaming potente, efficiente e concorrente in grado di lavorare con qualsiasi fonte di dati;
 * **risoluzione dei problemi**: ZIO cattura qualsiasi errore e per ciascuno fornisce un dettaglio _trace_ di esecuzione facilitando l'attività di risoluzione di eventuali bug;
 * **testabilità**: tramite l'_inferenza delle dipendenze_, ZIO favorisce lo sviluppo di interfacce la cui concretizzazione è dettata dal contesto di utilizzo.
@@ -18,4 +18,3 @@ ZIO non è l'unica scelta possibile per la programmazione concorrente in Scala. 
 [^2]: Per dettagli: [https://monix.io/](https://monix.io/)
 
 [^3]: Per dettagli: [https://cats-effect/](https://typelevel.org/cats-effect/)
-
