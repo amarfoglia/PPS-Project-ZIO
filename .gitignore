@@ -465,3 +465,4 @@ gradle-app.setting
 build
 
 .idea/
+node_modules
