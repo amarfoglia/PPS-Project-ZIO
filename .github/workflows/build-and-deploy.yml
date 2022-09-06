@@ -29,7 +29,7 @@ jobs:
       - name: Generate PPS report PDF
         uses: docker://pandoc/latex:2.18
         with:
-          args: -d ./docs/pandoc/latex.yml -o reports/PPSReport.pdf -M date:${{steps.date.outputs.date}}
+          args: -d ./report/pandoc/latex.yml -o reports/PPSReport.pdf -M date:${{steps.date.outputs.date}}
       - uses: DanySK/build-check-deploy-gradle-action@2.1.5
 
       - name: Upload Build

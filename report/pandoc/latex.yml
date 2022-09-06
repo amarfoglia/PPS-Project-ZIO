@@ -26,4 +26,4 @@ metadata:
 
 #
 output-file: PPSReport.pdf
-resource-path: ['./src']
+resource-path: ['./sections']
