@@ -1,5 +1,5 @@
 defaults:
-  - ./sections/index.yml
+  - ./report/sections/index.yml
 
 # common configuration
 from: markdown
@@ -26,4 +26,4 @@ metadata:
 
 #
 output-file: PPSReport.pdf
-resource-path: ['./sections']
+resource-path: ['./report']
