@@ -11,7 +11,6 @@ filters:
   - pandoc-crossref
 
 metadata:
-  documentclass: scrartcl
   title: ZIO
   subtitle: PPS Report
   lang: it-IT
