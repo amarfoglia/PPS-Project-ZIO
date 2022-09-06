@@ -16,8 +16,6 @@ metadata:
   lang: it-IT
   author:
     - Alberto Marfoglia
-  abstract: |
-    This is the abstract.
   autoSectionLabels: true
   chapters: false
   classoption:
