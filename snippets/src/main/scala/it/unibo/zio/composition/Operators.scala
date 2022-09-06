@@ -27,11 +27,3 @@ object Operators {
     (1 to 10).map(n => Console.printLine(n))
   }
 }
-
-import zio.ZIOAppDefault
-
-object Main extends ZIOAppDefault {
-  import Operators._
-
-  val run = printNumberByCollectAll
-}
