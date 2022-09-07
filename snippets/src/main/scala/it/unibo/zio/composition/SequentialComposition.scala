@@ -10,12 +10,12 @@ object SequentialComposition {
     def printLine[L1 >: L](line: L1): Task[Unit]
 
   object Console:
-    lazy val stdConsole = new Console[String]:
+    lazy val stdConsole: Console[String] = new Console[String]:
       override val readLine: Task[String] =
         ZIO.attempt(StdIn.readLine())
-
       override def printLine[String](line: String): Task[Unit] =
         ZIO.attempt(println(line))
+  end Console
 
   import Console.stdConsole
 

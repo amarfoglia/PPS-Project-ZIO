@@ -7,6 +7,9 @@ object MyZIO {
 
     def flatMap[R1 <: R, E1 >: E, B](f: A => ZIO[R1, E1, B]): ZIO[R1, E1, B] =
       ZIO(r => self.run(r).fold(ZIO.fail(_), f).run(r))
+    
+    def provide(r: R): ZIO[Any, E, A] =
+      ZIO(_ => self.run(r))
   }
 
   object ZIO {
@@ -15,5 +18,8 @@ object MyZIO {
 
     def fail[E](e: => E): ZIO[Any, E, Nothing] =
       ZIO(_ => Left(e))
+    
+    def environment[R]: ZIO[R, Nothing, R] =
+      ZIO(r => Right(r))
   }
 }

@@ -1,6 +1,7 @@
 package it.unibo.zio.composition
 
 import java.io.IOException
+import scala.collection.immutable.AbstractSeq
 import scala.language.postfixOps
 
 object Operators {
@@ -19,11 +20,11 @@ object Operators {
   val zippedLeft: ZIO[Any, IOException, Unit] =
     Console.printLine("What is your name?") <* Console.readLine
 
-  val printNumbersByForeach = ZIO.foreach(1 to 10) {
+  val printNumbersByForeach: ZIO[Any, IOException, Seq[Unit]] = ZIO.foreach(1 to 10) {
       n => Console.printLine(n.toString)
     }
 
-  val printNumberByCollectAll = ZIO.collectAll {
+  val printNumberByCollectAll: ZIO[Any, IOException, Seq[Unit]] = ZIO.collectAll {
     (1 to 10).map(n => Console.printLine(n))
   }
 }
