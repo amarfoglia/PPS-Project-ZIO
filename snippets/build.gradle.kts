@@ -1,4 +1,3 @@
-@Suppress("DSL_SCOPE_VIOLATION")
 plugins {
     scala
     alias(libs.plugins.scalafmt)

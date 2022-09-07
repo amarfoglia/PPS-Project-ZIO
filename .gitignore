@@ -466,3 +466,6 @@ build
 
 .idea/
 node_modules
+.vscode/
+.metals/
+**/bin/
