@@ -1,6 +1,6 @@
 package it.unibo.zio
 
-import zio.test._
+import zio.test.*
 import zio.test.Assertion.equalTo
 
 object PropertyBaseTest extends ZIOSpecDefault {

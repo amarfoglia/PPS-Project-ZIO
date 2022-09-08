@@ -1,9 +1,10 @@
 package it.unibo.zio
 
-import zio._
+import zio.*
+
 import concurrent.duration.DurationInt
-import zio.test._
-import zio.test.Assertion._
+import zio.test.*
+import zio.test.Assertion.*
 
 object ZioServiceTest extends ZIOSpecDefault {
 
