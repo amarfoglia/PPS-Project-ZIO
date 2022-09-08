@@ -14,6 +14,7 @@ dependencies {
     implementation(libs.scala.library)
     implementation(libs.zio)
     testImplementation(libs.bundles.scala.test)
+    testImplementation(libs.zio.test)
 }
 
 fun Property<BigDecimal>.set(value: Double) =

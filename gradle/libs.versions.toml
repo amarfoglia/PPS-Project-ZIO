@@ -10,6 +10,7 @@ scala-test = { module = "org.scalatest:scalatest_3", version = "3.2.13" }
 scala-junit = { module = "org.scalatestplus:junit-4-13_3", version = "3.2.13.0" }
 scala-xml = { module = "org.scala-lang.modules:scala-xml_3", version = "2.1.0" }
 zio = { module = "dev.zio:zio_3", version.ref = "zio" }
+zio-test = { module = "dev.zio:zio-test_3", version.ref = "zio"}
 
 [bundles]
 scala-test = ["junit", "scala-test", "scala-junit", "scala-xml"]
