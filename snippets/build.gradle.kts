@@ -2,7 +2,7 @@ plugins {
     scala
     alias(libs.plugins.scalafmt)
     alias(libs.plugins.spotless)
-    alias(libs.plugins.scalatest)
+//    alias(libs.plugins.scoverage)
 }
 
 group = "it.unibo.zio"
@@ -11,13 +11,16 @@ repositories {
     mavenCentral()
 }
 
+//scoverage {
+//    scoverageScalaVersion.set("2.0.1")
+//    minimumRate.set(BigDecimal(0))
+//}
+
 dependencies {
-    implementation("com.vladsch.flexmark:flexmark-util:0.64.0")
-    testImplementation("com.vladsch.flexmark:flexmark-all:0.64.0")
     implementation(libs.scala.library)
     implementation(libs.zio)
     testImplementation(libs.bundles.scala.test)
-    testImplementation(libs.zio.test)
+    testImplementation(libs.bundles.zio.test)
     testRuntimeOnly(libs.scala.xml)
 }
 

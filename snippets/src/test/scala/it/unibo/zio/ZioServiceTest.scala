@@ -1,12 +1,14 @@
 package it.unibo.zio
 
+import org.junit.runner.RunWith
 import zio.*
 
 import concurrent.duration.DurationInt
 import zio.test.*
 import zio.test.Assertion.*
 
-object ZioServiceTest extends ZIOSpecDefault {
+@RunWith(classOf[zio.test.junit.ZTestJUnitRunner])
+class ZioServiceTest extends ZIOSpecDefault {
 
   val greet: Task[Unit] =
     for {

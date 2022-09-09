@@ -1,9 +1,11 @@
 package it.unibo.zio
 
+import org.junit.runner.RunWith
 import zio.test.*
 import zio.test.Assertion.equalTo
 
-object PropertyBaseTest extends ZIOSpecDefault {
+@RunWith(classOf[zio.test.junit.ZTestJUnitRunner])
+class PropertyBaseTest extends ZIOSpecDefault {
   val intGen: Gen[Any, Int] = Gen.int
 
   def spec =
