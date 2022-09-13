@@ -144,6 +144,27 @@ for {
 ```
 Nella seconda versione, prima verrà stampato _"Done interrupting"_ e `5` secondi dopo anche _"Closing file"_.
 
+Infine ZIO consente di evitare di attendere il completamento dell'interruzione di _effect_ grazie all'operatore `disconnect`. Considerando due _effect_, `a` e `b`, nel caso in cui il secondo venisse disconnesso, e fosse chiamato `interrupt`, il programma attenderebbe solo la terminazione di `a`:
+```scala
+val a: URIO[Clock, Unit] =
+  ZIO.never
+    .ensuring(ZIO.succeed("Closed A")
+    .delay(3.seconds))
+
+val b: URIO[Clock, Unit] =
+  ZIO.never
+  .ensuring(ZIO.succeed("Closed B")
+  .delay(5.seconds))
+  .disconnect
+
+for {
+  fiber <- (a <&> b).fork
+  _ <- Clock.sleep(1.second)
+  _ <- fiber.interrupt
+  _ <- ZIO.succeed(println("Done interrupting"))
+} yield ()
+```
+
 ### Supervisione delle _Fibers_
 
 Similmente a quanto succede in un _modello ad attori_, in cui il padre supervisiona i figli, anche ZIO implementa un **modello di supervisione delle _fibers_**:
