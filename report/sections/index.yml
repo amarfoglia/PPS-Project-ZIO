@@ -1,3 +1,6 @@
 input-files:
   - ./report/sections/1-introduzione.md
   - ./report/sections/2-elementi-fondamentali.md
+  - ./report/sections/3-testare-programmi-zio.md
+  - ./report/sections/4-zio-error-model.md
+  - ./report/sections/5-parallelismo-e-concorrenza.md
