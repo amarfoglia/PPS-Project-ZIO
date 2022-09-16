@@ -2,8 +2,6 @@ package it.unibo.zio.concurrency
 
 import zio.*
 
-import scala.runtime.Nothing$
-
 object Interruption {
 
   val defaultInterruption = for {
@@ -59,10 +57,10 @@ object Interruption {
 
 }
 
-object Main extends ZIOAppDefault {
-  import Interruption._
-
-  def run =
-    DisconnectAndInterrupt.program
-      .provideEnvironment(ZEnvironment(Clock.ClockLive))
-}
+//object Main extends ZIOAppDefault {
+//  import Interruption._
+//
+//  def run =
+//    DisconnectAndInterrupt.program
+//      .provideEnvironment(ZEnvironment(Clock.ClockLive))
+//}

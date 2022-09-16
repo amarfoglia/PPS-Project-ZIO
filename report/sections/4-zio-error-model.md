@@ -8,7 +8,7 @@ ZIO definisce tre possibili tipologie di fallimento:
 - **_Defects_**: sono fallimenti non rappresentanti dall'_error type_ del _effect_, poiché modellano errori non prevedibili oppure non recuperabili. Devono essere propagati lungo lo _stack_ dell'applicazione al fine di gestirli, ad esempio convertendoli in _failure_, nei livelli superiori;
 - **_Fatals_**: sono errori catastrofici che determinano la terminazione immediata del programma.
 
-## Gestione imperativa vs dichiarativa
+## Gestione degli errori imperativa vs dichiarativa
 Seguendo un'approccio imperativo, quando si presenta uno stato non valido, viene lanciata un'eccezione che deve essere gestita tramite `try`/`catch`. Nel caso dichiarativo gli errori diventano dei valori, quindi non è necessario avvalersi delle eccezioni interrompendo il flusso del programma. Questo secondo approccio genera diversi benefici:
 
 - _referential transparency_: quando viene lanciata un'eccezione, la trasparenza referenziale viene meno. Mentre un approccio di gestione degli errori dichiarativo rende indipendente il comportamento del programma dalla posizione in cui vengono valutate le diverse espressioni;
@@ -81,8 +81,6 @@ timestamp=2022-03-08T17:55:50.002161369Z level=ERROR
   java.lang.String: Oh uh! at <empty>.MainApp.run(MainApp.scala:4)"
 ```
 
-### Cattura delle _Failures_
-
 Le _failures_ possono essere catturate e recuperate efficacemente tramite l'operatore `catchAll`:
 ```scala
 trait ZIO[-R, +E, +A] {
@@ -150,14 +148,14 @@ effect            // ZIO[Any, String, String]
   .unsandbox      // ZIO[Any, String, String]
 ```
 
-### Cattura dei _Defects_
-
 Anche per i _defects_ ZIO mette a disposizione due operazioni per la loro cattura.
 ```scala
 trait ZIO[-R, +E, +A] {
-  def catchAllDefect[R1 <: R, E1 >: E, A1 >: A](h: Throwable => ZIO[R1, E1, A1]): ZIO[R1, E1, A1]
+  def catchAllDefect[R1 <: R, E1 >: E, A1 >: A]
+    (h: Throwable => ZIO[R1, E1, A1]): ZIO[R1, E1, A1]
 
-  def catchSomeDefect[R1 <: R, E1 >: E, A1 >: A](pf: PartialFunction[Throwable, ZIO[R1, E1, A1]]): ZIO[R1, E1, A1]
+  def catchSomeDefect[R1 <: R, E1 >: E, A1 >: A]
+    (pf: PartialFunction[Throwable, ZIO[R1, E1, A1]]): ZIO[R1, E1, A1]
 }
 ```
 Siccome i _defects_ sono errori non previsti, la regola base è quella di catturarli al fine di tracciarne il contenuto, ad esempio tramite un sistema di logging, e non di effettuare operazioni di recupero.
@@ -173,7 +171,7 @@ ZIO.dieMessage("Boom!")
   }
 ```
 
-### Convertire errori in _Defects_
+### Conversione degli errori in _Defects_
 
 Man mano che si avanza lungo i livelli dell'applicazione, si passa da aspetti di basso livello a quelli legati alla _business logic_ quindi diventerà sempre più chiaro quali tipi di errori sono recuperabili e quali no. Per esempio una funzione di supporto per la lettura di file potrebbe ritornare uno `ZIO[Any, IOException, String]`, ma l'errore `IOException` nei livelli superiori può assumere il significato di _defects_ poiché, per esempio, l'assenza di un file di configurazione potrebbe comportare la chiusura irrecuperabile dell'applicazione. 
 

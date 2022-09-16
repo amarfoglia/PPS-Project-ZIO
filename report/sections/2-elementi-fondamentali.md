@@ -209,7 +209,7 @@ val echoZIO: Task[Unit] = for {
 
 [^4]:  Per ulteriori dettagli: [link a Wikipedia](https://en.wikipedia.org/wiki/Referential_transparency)
 
-### Effect constructor per computazioni pure
+### Computazioni pure
 
 ZIO fornisce una varietà di costruttori per convertire _valori puri_ in ZIO _effect_. Il loro impiego trova spazio quando è necessario combinare del _codice puro_ con devi _effect_ costruiti sulla base di codice affetto da _side effects_. I due costruttori più importanti di questa categoria sono `succeed` e `fail`:
 ```scala
@@ -220,7 +220,7 @@ object ZIO {
 ```
 Il primo converte un valore in un _effect_ che fallisce con il valore stesso e il tipo in caso di successo è `Nothing`. Il secondo è l'inverso del primo. I parametri di entrambe le funzioni sono valutati in maniera _lazy_.
 
-### Effect constructor per computazioni con side effects
+### Computazioni con side effects
 
 Ovviamente i costruttori più importanti sono quelli per la gestione delle computazioni affette da _side effects_. Questi costruttori convertono codice procedurale in ZIO _effects_, al fine di separare il "cosa" dal "come". 
 
