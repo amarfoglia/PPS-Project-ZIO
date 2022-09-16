@@ -165,7 +165,7 @@ for {
 } yield ()
 ```
 
-### Supervisione delle _Fibers_
+### Supervisione delle Fibers
 
 Similmente a quanto succede in un _modello ad attori_, in cui il padre supervisiona i figli, anche ZIO implementa un **modello di supervisione delle _fibers_**:
 
@@ -274,7 +274,7 @@ trait Synchronized[A] {
 ```
 Internamente `Synchronized` è implementato tramite un semaforo (`Semaphore`) così da garantire che solo una _fiber_ alla volta possa interagire con la `Ref`.
 
-### Stato locale alla _fiber_: FiberRef
+### Stato locale alla Fiber: FiberRef
 
 A volte, può essere necessario mantenere uno stato interno ad ogni _fiber_, in ZIO è possibile definendo un `FiberRef`. Questo, oltre a comporsi di un valore iniziale come in `Ref`, definisce altre due operazioni:
  
@@ -347,7 +347,7 @@ for {
 ```
 Il programma proposto è deterministico, cioè la stampa a video sarà sempre `"Hello World"`. Quindi si può dire che la `Promise` permette di imporre un'ordinamento lineare tra porzioni di codice concorrente.
 
-### Completare una _Promise_
+### Promise: Completamento
 
 Esistono altri modi per completare una `Promise`:
 
@@ -368,7 +368,7 @@ trait Promise[E, A] {
 }
 ```
 
-### Attendere una _Promise_
+### Promise: Attesa
 
 ZIO offre diversi metodi che permetto di osservare lo stato di una `Promise`:
 
@@ -383,7 +383,7 @@ trait Promise[E, A] {
 }
 ```
 
-### Interrompere una _Promise_
+### Promise: Interruzione
 
 Le _Promises_ supportano il modello di interruzione di ZIO. Ciò significa che il completamento di una `Promise` con un _effect_ interrotto, causerà l'interruzione di tutte le _fiber_ in attesa su quella `Promise`. 
 
@@ -409,7 +409,7 @@ trait Queue[A] {
 ```
 La prima consente di inserire un valore nella coda, mentre `take` sospende (blocca semanticamente) la _fiber_ corrente finché non è presente un valore.
 
-### Varianti di _Queue_
+### Queue: Varianti
 
 Le due principali tipologie di code sono quella **`unbounded`**, che non ha una capacità massima, e quella **`bounded`** che definisce il numero massimo di valori che può contenere (_capacity_). Quest'ultima permette di prevenire problemi legati alla memoria (_memory leak problem_), ma richiede di definire la logica di gestione nel caso in cui si tenti di inserire un valore in una coda piena. 
 
@@ -445,7 +445,7 @@ A tal proposito, ZIO mette a disposizione tre strategie:
   } yield (a, b)
   ```
 
-### Chiusura di una _Queue_
+### Queue: Chiusura
 
 Siccome potrebbero esserci più _fiber_ in attesa di inserire o prelevare dei valori da una coda, si vuole avere un modo per interrompere quelle _fiber_ nel caso in cui la `Queue` non fosse più utile. Il metodo `shutdown` fornisce proprio quello strumento.
 ```scala
@@ -475,7 +475,7 @@ object Hub {
 ```
 Concettualmente, ogni _consumer_ interagisce con la struttura come se fosse un canale le cui estremità vengono rispettivamente rappresentate dalle interfacce `Enqueue` e `Dequeue`.
 
-### Varianti di _Hub_
+### Tipologie di Hub
 
 Come nel caso delle code, anche gli _hub_ possono essere ***bounded*** e ***unbounded***. La tipologia più comune è quella _bounded_ con strategia _back pressure_, e può essere implementata tramite l'operatore `bounded`:
 ```scala
