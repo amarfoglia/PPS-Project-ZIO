@@ -6,3 +6,5 @@ input-files:
   - ./report/sections/5-parallelismo-e-concorrenza.md
   - ./report/sections/6-gestione-delle-risorse.md
   - ./report/sections/7-iniezione-delle-dipendenze.md
+  - ./report/sections/8-stm.md
+  - ./report/sections/9-streaming-con-ZStream.md
