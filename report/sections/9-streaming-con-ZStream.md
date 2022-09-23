@@ -119,9 +119,9 @@ val s1 = ZStream(1, 2, 3, 4, 5).runFold(0)(_ + _)
 val s2 = ZStream.iterate(1)(_ + 1).runFoldWhile(0)(_ <= 5)(_ + _)
 ```
 
-Infine a questi si aggiunge `ZSink`[^8], che può essere rappresentato come una funzione che riceve in input un numero variabile di elementi e che produce un solo valore in uscita. 
+Infine a questi si aggiunge `ZSink`[^9], che può essere rappresentato come una funzione che riceve in input un numero variabile di elementi e che produce un solo valore in uscita. 
 ```scala
 val sum: UIO[Int] = ZStream(1,2,3).run(ZSink.sum)
 ```
 
-[^8]: Per approfondire: [https://zio.dev/zsink](https://zio.dev/reference/stream/zsink/)
+[^9]: Per approfondire: [https://zio.dev/zsink](https://zio.dev/reference/stream/zsink/)

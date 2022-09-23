@@ -14,10 +14,10 @@ Seguendo un'approccio imperativo, quando si presenta uno stato non valido, viene
 
 - _referential transparency_: quando viene lanciata un'eccezione, la trasparenza referenziale viene meno. Mentre un approccio di gestione degli errori dichiarativo rende indipendente il comportamento del programma dalla posizione in cui vengono valutate le diverse espressioni;
 - _type safety_: il tracciamento del tipo dell'errore lungo gli _effect_, abilita il compilatore a prevenire la scrittura di codice _unsafe_ e permette di disinteressarsi degli aspetti implementativi;
-- _exhaustive checking_: nel caso di `try` e `catch`, il compilatore non ha un ruolo attivo nella gestione degli errori, quindi non è possibile sviluppare _total function_[^6];
+- _exhaustive checking_: nel caso di `try` e `catch`, il compilatore non ha un ruolo attivo nella gestione degli errori, quindi non è possibile sviluppare _total function_[^7];
 - _error model_: il modello di errore basato sulle istruzioni `try`/`catch`/`finally` non consente di catturare multiple eccezioni, andando così a perderebbe del contenuto informativo.
 
-[^6]: funzione definita per tutti i valori del dominio.
+[^7]: funzione definita per tutti i valori del dominio.
 
 ## Cause
 

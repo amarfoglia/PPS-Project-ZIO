@@ -99,12 +99,12 @@ for {
 
 Il limite appena proposto può essere superato nel caso di:
 
-- _effect idempotenti_[^7]: si prenda una `Promise[Int]`, la chiamata `promise.succeed(42).ignore` avrà lo stesso effetto indipendentemente dal numero di esecuzioni;
+- _effect idempotenti_[^8]: si prenda una `Promise[Int]`, la chiamata `promise.succeed(42).ignore` avrà lo stesso effetto indipendentemente dal numero di esecuzioni;
 - _effect_ che hanno una funzione _inversa_: gli effetti prodotti da una _query_ di inserimento possono essere annullati tramite un _effect_ che implementa la rimozione.
 
 Infine il secondo limite delle transazioni STM, è relativo alle _performance_. In una situazione di forte contesa, cioè con elevati conflitti di aggiornamento, le transazioni devono essere ripetute svariate volte provocando una riduzione delle _performance_. In questo caso, è consigliato adottare delle strutture concorrenti come `Queue`, oppure utilizzare un `Semaphore` per proteggere gli accessi.
 
-[^7]: eseguire un _effect_ una sola volta è equivalente a farlo più volte.
+[^8]: eseguire un _effect_ una sola volta è equivalente a farlo più volte.
 
 ## STM - Strutture dati
 
