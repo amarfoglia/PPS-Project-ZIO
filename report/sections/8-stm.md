@@ -1,12 +1,12 @@
 # STM - Software Transactional Memory
 
-STM è uno strumento che permette di comporre singole operazioni al fine di eseguirle in maniera atomica come se fossero un'unica transazione. Questo consente di risolvere agilmente le sfide e i problemi della programmazione concorrente; il codice scritto con STM non è affetto da _deadlocks_. Inoltre, seguendo la logica di ZIO, anche per gli aggiornamenti atomici è necessario fornire una descrizione come avviene per gli _effect_. Questo permette di costruire transazioni sempre più complesse sfruttando un approccio incrementale. Nella pratica ci si avvale del tipo di dato `ZSTM`.
+STM è uno strumento che permette di comporre singole operazioni in un'unica transazione eseguibile in maniera atomica. Questo consente di risolvere agilmente le sfide e i problemi della programmazione concorrente; il codice scritto con STM non è affetto da _deadlocks_. Inoltre, seguendo la logica di `ZIO`, anche per gli aggiornamenti atomici è necessario fornire una loro descrizione così da ritardare la loro valutazione. Questo permette di costruire transazioni sempre più complesse sfruttando un approccio incrementale. Nella pratica ci si avvale del tipo di dato `ZSTM`.
 
-`ZSTM[R, E, A]` descrive una transazione che richiede un _environment_ `R` e che può fallire con un errore `E`, oppure avere successo con un valore `A`. Nel caso in cui l'ambiente non fosse necessario, si opta per l'alias `STM`.
+`ZSTM[R, E, A]` descrive una transazione che richiede un _environment_ `R` e che può fallire con un errore `E`, oppure avere successo con un valore `A`. Nel caso in cui l'ambiente non fosse necessario si può utilizzare l'alias `STM`.
 ```scala
 type STM[+E, +A] = ZSTM[Any, E, A]
 ```
-L'implementazione di STM in ZIO si basa sul tipo di dato `TRef`, il quale è equivalente a `Ref` fatta eccezione per gli operatori che, nel primo caso, ritornano _effect_ STM automaticamente componibili. 
+L'implementazione di STM in `ZIO` si basa sul tipo di dato `TRef`, il quale è equivalente a `Ref` fatta eccezione per gli operatori che, in questo caso, restituiscono sempre _effect_ STM automaticamente componibili. 
 ```scala
 trait TRef[A] {
   def get: STM[Nothing, A]
@@ -17,10 +17,10 @@ trait TRef[A] {
 ```
 L'esecuzione di una transazione STM comprende i seguenti passaggi:
 
-1. si esegue provvisoriamente la transazione memorizzando i risultati della variabili transazionali;
+1. si esegue provvisoriamente la transazione memorizzando i risultati delle variabili transazionali;
 2. si verifica se i valori delle variabili transazionali sono stati modificati da quando si è avviata la transazione;
 3. se i valori non sono cambiati la transazione viene applicata;
-4. se i valori hanno subito delle modifiche, la transazione fallisce, e si riparte dal primo step.
+4. se i valori hanno subito delle modifiche, la transazione fallisce, e si riparte dal primo punto.
 
 Si prenda come esempio il trasferimento di fondi tra due conti bancari.
 ```scala
@@ -31,23 +31,31 @@ def transfer(
 ): STM[Throwable, Unit] =
   for {
     senderBalance <- from.get
-    _ <- if (amount > senderBalance)
-          STM.fail(new Throwable("insufficient funds"))
-         else
-          from.update(_ - amount) *>
-            to.update(_ + amount)
+    _             <- if (amount > senderBalance)
+                      STM.fail(new Throwable("insufficient funds"))
+                    else
+                      from.update(_ - amount) *>
+                        to.update(_ + amount)
   } yield ()
 ```
 La logica è corretta perché se la variabile transazionale `from` venisse modifica, la transazione fallirebbe causando il ripristino delle variabili ai valori originali, e l'intera transazione verrebbe rieseguita automaticamente.
 
-Se si vuole realizzare un API che astrae dai concetti di STM, così da favorire la semplicità alla componibilità, si può restituire un _effect_ di ZIO a partire da una transazione tramite l'operatore `commit`.
+In alcuni casi potrebbe essere necessario astrarre dalla logica STM, a tal proposito `ZIO` fornisce l'operatore `commit`: converte una transazione in un _effect_. Sfruttando la funzione `commit` è possibile ristrutturare il codice precedente in modo da migliorarne la leggibilità lato chiamante.
 ```scala
 final class Balance private (
-  private[Balance] val value: TRef[Int]
+  private val value: TRef[Int]
 ) { self =>
   def transfer(that: Balance, amount: Int): Task[Unit] = {
-    val transaction: STM[Throwable, Unit] = ...
-    // ...
+    val transaction: STM[Throwable, Unit] = for {
+      senderBalance <- value.get
+      _             <- if (amount > senderBalance)
+                        STM.fail(
+                          new Throwable("insufficient funds")
+                        )
+                       else
+                          self.value.update(_ - amount) *>
+                            that.value.update(_ + amount)
+    } yield ()
     transaction.commit
   }
 }
@@ -55,7 +63,7 @@ final class Balance private (
 
 ## STM - Operatori
 
-Generalmente, quasi tutti gli operatori di ZIO hanno una controparte in ZSTM, fatta eccezione per quelli che si occupano di concorrenza e _effect_ arbitrari. Tra questi si ricorda: `flatMap`, `map`, `foldSTM`, `zipWith` e `foreach`. A questi se ne aggiungo altri, specifici di STM, tra cui il più importante è `retry`: fa sì che un'intera transazione venga ripetuta.
+Generalmente, quasi tutti gli operatori di `ZIO` hanno una controparte in ZSTM, fatta eccezione per quelli che si occupano di concorrenza e _effect_ arbitrari. Oltre ai classici operatori come `flatMap`, `map`, `foldSTM`, `zipWith` e `foreach`, se ne aggiungo altri, specifici di STM, di cui il più importante è `retry`: fa sì che un'intera transazione venga rieseguita.
 ```scala
 def autoDebit(
   account: TRef[Int],
@@ -66,7 +74,7 @@ def autoDebit(
     else STM.retry
 }
 ```
-Nell'esempio proposto non viene a crearsi un _busy loop_, perché l'implementazione di STM tenterà nuovamente la transazione solo a seguito della modifica di una delle variabili transazionali, in questo caso `balance`.  
+Senza la funzione `retry` le transazioni verrebbero rieseguite solo a fronte di un cambiamento delle variabili transazionali, rendendo impossibile la definizione di una logica di ripristino controllata. Nell'esempio, la transazione verrà ripetuta finché non completa con successo.
 
 ## STM - Limitazioni
 
@@ -75,7 +83,7 @@ STM non supporta _effect_ arbitrari all'interno delle transazioni. Si consideri 
 val arbitraryEffect: UIO[Unit] =
   ZIO.succeed(println("Running"))
 ```
-In questo caso, il tentativo di esecuzione della transazione visualizzerà su _console_ il messaggio `"Running"`. Ad ogni suo fallimento verrà riproposta la stessa stampa, provocando una differenza osservabile tra il tentativo iniziale e quelli successivi. Questo non consente di ragionare sulla logica delle transazioni senza conoscere a priori il numero di tentativi. Di conseguenza, non è possibile svolgere istruzioni concorrenti all'interno di una transazione STM, però quest'ultime possono essere eseguite in maniera concorrente.
+In questo caso, il tentativo di esecuzione della transazione visualizzerà su _console_ il messaggio `"Running"`. Ad ogni suo fallimento verrà riproposta la stessa stampa, provocando una differenza osservabile tra il tentativo iniziale e quelli successivi. Questo non consente di ragionare sulla logica delle transazioni senza conoscere a priori il numero di tentativi. Di conseguenza, non è possibile svolgere istruzioni concorrenti all'interno di una transazione STM, però le transazioni possono essere eseguite in maniera concorrente.
 ```scala
 for {
   alice    <- TRef.make(100).commit
@@ -91,28 +99,28 @@ for {
 
 Il limite appena proposto può essere superato nel caso di:
 
-- _effect idempotenti_[^5]: si prenda una `Promise[Int]`, la chiamata `promise.succeed(42).ignore` avrà lo stesso effetto indipendentemente dal numero di esecuzioni;
+- _effect idempotenti_[^7]: si prenda una `Promise[Int]`, la chiamata `promise.succeed(42).ignore` avrà lo stesso effetto indipendentemente dal numero di esecuzioni;
 - _effect_ che hanno una funzione _inversa_: gli effetti prodotti da una _query_ di inserimento possono essere annullati tramite un _effect_ che implementa la rimozione.
 
-Infine il secondo limite delle transazioni STM, è relativo alle _performance_. In una situazione di forte contesa, cioè con elevati conflitti di aggiornamento, le transazioni devono essere ripetute svariate volte provocando una riduzione delle _performance_. In questi contesti, buona norma è esplorare soluzioni di concorrenza come `Queue` o utilizzare un `Semaphore` per proteggere gli accessi.
+Infine il secondo limite delle transazioni STM, è relativo alle _performance_. In una situazione di forte contesa, cioè con elevati conflitti di aggiornamento, le transazioni devono essere ripetute svariate volte provocando una riduzione delle _performance_. In questo caso, è consigliato adottare delle strutture concorrenti come `Queue`, oppure utilizzare un `Semaphore` per proteggere gli accessi.
 
-[^5]: eseguire un _effect_ una sola volta equivale a farlo più volte.
+[^7]: eseguire un _effect_ una sola volta è equivalente a farlo più volte.
 
 ## STM - Strutture dati
 
-Le strutture dati di STM sono definite in termini di uno o più valori `TRef`, quindi rappresentano concetti mutabili in grado di partecipare alle transazioni. Quando si opera su queste strutture dati, le modifiche vengono applicati sulla struttura stessa piuttosto che su una nuova creata _"on-fly"_. 
+Le strutture dati di STM sono definite in termini di uno o più valori `TRef`, quindi rappresentano concetti mutabili in grado di partecipare alle transazioni. Quando si opera su queste strutture dati, le modifiche vengono applicate sulla struttura stessa, quindi non vi è la creazione di un nuovo dato. 
 
 ### TArray
 
-Un `TArray` è l'equivalente STM di un _array_ mutabile, in cui la dimensione definita alla creazione non può essere cambiata e il valore di ogni indice è rappresentato da un `TRef` distinto.
+Un `TArray` è la versione STM di un _array_ mutabile, in cui la dimensione definita alla creazione non può essere cambiata e il valore di ogni indice è rappresentato da un `TRef` distinto.
 ```scala
 final class TArray[A] private (private val array: Array[TRef[A]]
 ```
-La funzione del `TArray`, in un contesto transazionale, è identica a quella di un classico `Array`, ma è la scelta ottimale per letture e scritture veloci ad accesso casuale.
+La funzione del `TArray`, in un contesto transazionale, è identica a quella di un classico `Array`, ed è la scelta ottimale in caso di letture e scritture veloci ad accesso casuale.
 
 La creazione di un `TArray` avviene tramite il costruttore `make`, e le funzioni fondamentali sono `apply` e `update`. La prima consente di accedere al valore di un certo indice, mentre la seconda permette di aggiornalo.
 
-Un esempio applicativo di `TArray`, può essere l'implementazione di un operatore `swap` che scambi gli elementi di due indici in una singola transazione.
+Un esempio applicativo di `TArray`, può essere l'implementazione di un operatore `swap` che scambia gli elementi di due indici in una singola transazione.
 ```scala
 def swap[A](
   array: TArray[A],
@@ -128,7 +136,7 @@ def swap[A](
 ```
 Nel caso di coppie di elementi con indici differenti, siccome per ogni posizione c'è un `TRef` a sé stante, è possibile eseguire due _fiber_ parallelamente evitando conflitti e conseguenti `retry`. 
 
-Un `TArray` supporta operatori come: `collectFirst`, `contains`, `count`, `exists`, `find`, `fold`, `forall`, `maxOption`, e `minOption`. Tra questi non è presente `map` perché non in linea con la logica di mutabilità delle strutture dati STM. Al suo posto viene fornito `transform` che applica le modifiche "sul posto" (direttamente sulla struttura dati).
+Un `TArray` supporta operatori come: `collectFirst`, `contains`, `count`, `exists`, `find`, `fold`, `forall`, `maxOption`, e `minOption`. Tra questi non è presente `map` poiché non è allineato con la logica di mutabilità delle strutture dati STM. Questo viene sostituito da `transform` che permette di applicare le modifiche "sul posto".
 ```scala
 val transaction = for {
   array <- TArray.make(1, 2, 3)
@@ -149,7 +157,7 @@ trait TMap[K, V] {
   def put(k: K, v: V): STM[Nothing, Unit]
 }
 ```
-A questi se ne aggiungono altri presenti in una _map_ classica: `contains`, `isEmpty`, `fold`, `foreach`, `keys`.
+A questi se ne aggiungono altri più classici come: `contains`, `isEmpty`, `fold`, `foreach`, `keys`.
 
 ### TPriorityQueue
 
@@ -157,7 +165,7 @@ Una `TPriorityQueue` è equivalente a una classica coda, fatta eccezione per la 
 
 `TPriorityQueue` può essere estremamente utile quando si vuole rappresentare una coda in grado di supportare inserimenti (`offer`) e prelievi (`take`) simultanei e in cui si desidera sempre prendere il valore "più piccolo" o "più grande".
 
-Uno scenario d'uso può essere una coda di eventi, i cui elementi sono associati a un _timestamp_ impiegato nella definizione della politica di ordinamento. 
+Uno scenario d'uso può essere una coda di eventi, i cui elementi sono associati a un _timestamp_ utilizzato per implementare la politica di ordinamento. 
 ```scala
 final case class Event(time: Int, action: UIO[Unit])
 object Event {
@@ -174,13 +182,14 @@ Una `PriorityQueue` supporta le tipiche operazioni che ci si aspetta da una coda
 
 ### TPromise
 
-Lo scopo di `TPromise` è equivalente a quello delle `Promise` ma calato in un contesto transazionale. In altre parole, `TPromise` permette di sincronizzare il lavoro di _fiber_ differenti eseguite su transazioni distinte. Una transazione potrebbe attendere il completamento di una `TPromise` definita anche su un'altra transazione eseguita su una _fiber_ differente. 
+Lo scopo di `TPromise` è equivalente a quello delle `Promise` ma calato in un contesto transazionale. In altre parole, `TPromise` permette di sincronizzare il lavoro di _fiber_ differenti eseguite su transazioni distinte. 
 ```scala
 final class TPromise[E, A] private (
   private val ref: TRef[Option[Either[E, A]]]
 )
 ```
-Una `TPromise` è semplicemente una `TRef` che può essere sia vuota, cioè non ancora completa, sia detentrice di un valore `A` oppure di un errore `E` in caso di fallimento. Le operazioni fondamentali sono `await`, `done` e `poll`.
+
+Una `TPromise` è semplicemente una `TRef` il cui contenuto può essere vuoto, oppure valorizzato con un valore `A` in caso di completamento, oppure un errore `E` a fronte di un fallimento. Le operazioni fondamentali sono `await`, `done` e `poll`.
 
 ### TQueue
 

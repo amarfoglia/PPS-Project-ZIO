@@ -1,8 +1,8 @@
 # Gestione delle risorse
 
-Ogni volta che si accede ad una risorsa, ad esempio un file o una _socket, è fondamentale rilasciare questa una volta utilizzata. Può capitare però di dimenticarsi, sopratutto in contesti asincroni e concorrenti, a tal fine ZIO fornisce `acquireRelease` e `Scope` come strumenti che garantiscono il rilascio automatico delle risorse acquisite. 
+L'accesso ad una risorsa, ad esempio un file o una _socket_, deve obbligatoriamente includere anche la fase di rilascio. Questa non sempre viene eseguita, sopratutto in contesti asincroni e concorrenti, causando un "blocco" ingiustificato della risorsa. A tal fine `ZIO` propone di accedere alle risorse sfruttando gli strumenti `acquireRelease` e `Scope`, poiché ne garantiscono il rilascio automatico. 
 
-La soluzione tradizionale al problema della gestione sicura delle risorse è il costrutto `try ... finally`, che assicura il rilascio delle risorse anche nel caso di eccezioni.
+La soluzione tradizionale al problema della gestione delle risorse è il costrutto `try ... finally`, che assicura il loro rilascio anche a fronte di eccezioni.
 ```scala
 lazy val example = {
   val resource = acquire
@@ -13,11 +13,12 @@ lazy val example = {
   }
 }
 ```
-Questa tecnica è valida in un contesto sincrono, ma presenta delle falle se si introduce l'asincronia e la concorrenza, perché il codice può essere interrotto in qualsiasi punto. 
+Questa tecnica è valida nel contesto sincrono, ma presenta delle falle in quello asincrono/concorrente, poiché il codice può essere interrotto in qualsiasi punto. 
 
 ## Acquire & Release - Gestione sicura delle risorse
 
-Tutte le fasi del ciclo di vita di una risorsa devono essere gestite complessivamente, e la funzione `acquireReleaseWith` fa proprio questo.
+La funzione `acquireReleaseWith` permette di gestire tutte le fasi del ciclo di vita di una risorsa in unico punto, così che non si verifichino stati incoerenti. 
+
 ```scala
 import zio._
 object ZIO {
@@ -29,8 +30,7 @@ object ZIO {
     ???
 }
 ```
-Il parametro `acquire` descrive l'acquisizione di una certa risorsa `A`. La lambda `use` definisce la produzione di un certo risultato `B` a partire dalla risorsa `A` acquisita.
-Mentre `release` consente il rilascio della risorsa, e come si evince dalla firma, non prevede fallimenti.
+Il parametro `acquire` descrive l'acquisizione di una certa risorsa `A`, mentre `use` definisce la produzione di un certo risultato `B` a partire dalla risorsa `A` acquisita. Infine `release` consente il rilascio della risorsa, e come si evince dalla firma, non prevede fallimenti.
 
 L'operatore `acquireReleaseWith` fornisce le seguenti garanzie:
 
@@ -38,20 +38,20 @@ L'operatore `acquireReleaseWith` fornisce le seguenti garanzie:
 - l'azione di rilascio (`release`) sarà eseguita senza interruzioni;
 - l'azione di rilascio verrà eseguita sempre, indipendentemente dal risultato dell'utilizzo (`use`).
 
-Per riceve informazioni relative alla modalità di completamento di `use`, è possibile sfruttare la variante `acquireReleaseExitWith` che incapsula queste all'interno di un risultato di tipo `Exit[E, B]`. 
+Tramite la variante `acquireReleaseExitWith` è possibile ottenere informazioni, relative allo stato di terminazione di `use`, sotto forma di un risultato di tipo `Exit[E, B]`.
 
-Infine, ZIO espone anche l'operatore `ensuring` che consente di applicare una certa azione di finalizzazione ad un _workflow_ di _effect_, garantendone l'esecuzione anche in caso di interruzione o fallimento. 
+Infine, `ZIO` espone anche l'operatore `ensuring`, il quale consente di applicare una certa azione di finalizzazione ad un _workflow_ di _effect_, garantendone l'esecuzione anche in caso di interruzione o fallimento. 
 ```scala
 trait ZIO[-R, +E, +A] {
   def ensuring[R1 <: R](finalizer: ZIO[R1, Nothing, Any]):
     ZIO[R1, E, A]
 }
 ```
-Se si sta lavorando con una risorsa, o con qualsiasi cosa che richieda "allocazione" oltre alla "deallocazione", si deve utilizzare `acquireReleaseWith`, altrimenti `ensuring`.
+La funzione `acquireReleaseWith` è preferibile a `ensuring` nel caso in cui sia richiesta un'operazione di _allocazione_ in aggiunta a quella di _deallocazione_.  
 
 ### Scope - Risorse componibili
 
-Un limite di `acquireReleaseWith` è la sua scarsa ergonomia nel caso in cui si voglia comporre molteplici risorse. Si prenda come esempio un programma che richiede l'accesso a due file di testo, con l'intento di elaborarne i dati all'interno di un'unica operazione (`analyzeData`). 
+Un limite di `acquireReleaseWith` è la sua scarsa ergonomia nel caso di composizione di molteplici risorse. Si prenda come esempio un programma che richiede l'accesso a due _file_ di testo, con l'intento di elaborarne il contenuto all'interno di un'unica operazione (`analyzeData`). 
 ```scala
 def openFile(name: String): IO[IOException, File] = ???
 def closeFile(file: File): UIO[Unit] = ???
@@ -66,16 +66,18 @@ lazy val analyzeData: Task[Unit] =
     }
   }
 ```
-La soluzione proposta è corretta ma nel caso di più acquisizioni il numero di livelli innestati diventerebbe ingestibile, inoltre si sta imponendo un ordine sulla gestione dei file. Questo inficia sull'efficienza del programma, poiché si rende impossibile il caricamento delle risorse in parallelo. 
+La soluzione proposta è corretta ma impone un ordine sulla gestione delle risorse che rende impossibile una loro acquisizione in parallelo impattando negativamente sulle prestazioni. Inoltre nel caso di numerose acquisizioni si andrebbero a creare tanti livelli innestati, difficilmente gestibili.
 
-I problemi appeni citati possono essere evitati riconducendo il programma ad un approccio più dichiarativo, che consenta di combinare le risorse creandone una nuova, la quale descriva l'acquisizione e il rilascio di entrambe. La funzione di ZIO `acquireRelease` permette di fare ciò separando le operazioni di rilascio e acquisizione, dalla logica di utilizzo della risorsa. 
+I problemi appeni citati possono essere evitati adottando un approccio più dichiarativo, che consenta di combinare le risorse creandone una nuova, la quale descriva l'acquisizione e il rilascio di entrambe. La funzione di ZIO `acquireRelease` permette di fare ciò separando le operazioni di rilascio e acquisizione, dalla logica di utilizzo della risorsa. 
 ```scala
 def acquireRelease[R, E, A](
   acquire: ZIO[R, E, A]
 )(release: A => ZIO[R, Nothing, Any]): ZIO[R with Scope, E, A] =
   ???
 ```
-`Scope` rappresenta un oggetto al quale è possibile agganciare delle azioni di finalizzazione, eseguite alla sua chiusura. Tramite il costruttore `scoped` è possibile creare un nuovo `Scope` che completerà la sua esecuzione anche in caso di fallimento o interruzione. Dati questi strumenti è possibile riscrivere il programma precedente nel seguente modo:
+`Scope` rappresenta un oggetto al quale è possibile agganciare delle azioni di finalizzazione, eseguite alla sua chiusura indipendentemente da fallimenti o interruzioni. Uno `Scope` può essere creato avvalendosi del costruttore `scoped`. 
+
+Dati questi strumenti è possibile riscrivere il programma precedente nel seguente modo:
 ```scala
 def file(name: String): ZIO[Scope, Throwable, File] =
   ZIO.acquireRelease(openFile(name))(closeFile)
@@ -92,7 +94,7 @@ def analyzeData(
     }
   }
 ```
-La funzione `file` consente di descrivere la risorsa indipendentemente da come verrà sfruttata. L'utilizzo di `Scope` permette di interagire con le risorse come se fossero dei semplici valori di ZIO, quindi possono essere composti sfruttando gli operatori della libreria, come: `flatMap`, `map` e `zipPar`.  Inoltre, `ZIO.scoped` definisce la durata di vita della risorsa indipendentemente dalla sua creazione. Quindi la risorsa per essere utilizzata dall'esterno deve prima essere convertita in qualcos'altro, per esempio nel caso di un file, il testo può essere caricato in memoria. 
+La funzione `file` consente di descrivere la risorsa tralasciando la logica di utilizzo. Grazie a `Scope` è possibile interagire con le risorse come se fossero dei valori di `ZIO`, quindi componibili tramite i classici operatori della libreria tra cui: `flatMap`, `map` e `zipPar`.  Inoltre, il blocco `ZIO.scoped` circoscrive la durata di vita della risorsa, quindi questa non può essere utilizzata esternamente a meno che il suo contenuto non venga copiato/convertito in qualcos'altro. Per esempio nel caso di un file, il testo può essere caricato in memoria. 
 
 Tramite `Scope` è possibile modellare esplicitamente il tempo di vita di una _fiber_, continuando ad utilizzare gli operatori precedentemente presentati. Per esempio, si potrebbe definire un programma che in _background_ invia un `heartbeat`:
 ```scala
@@ -109,4 +111,4 @@ ZIO.scoped {
   } yield ()
 }
 ```
-Nell'esempio proposto viene garantita la terminazione del `heartbeat` alla chiusura dello `Scope`. Questo permette di delegare la definizione della durata del segnale al chiamante, evitando il suo inserimento all'interno della logica della funzione. La _fiber_ viene eseguita all'interno dello `Scope` specificato, grazie all'operatore `forkScoped`.
+Nell'esempio proposto viene garantita la terminazione del `heartbeat` alla chiusura dello `Scope`. Questo offre al chiamante un maggior controllo sul processo e permette di estrarre dal metodo il concetto di durata. Inoltre, l'operatore `forkScoped` esegue la _fiber_ all'interno dello `Scope` specificato.

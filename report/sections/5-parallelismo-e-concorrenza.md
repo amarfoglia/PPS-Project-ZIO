@@ -1,12 +1,14 @@
 # Parallelismo e concorrenza
 
+Il capitolo seguente approfondirà il supporto fornito da `ZIO` per quanto riguarda la programmazione concorrente, parallela e asincrona. Partendo dal modello proposto da `ZIO`, si proseguirà con un approfondimento sugli operatori e si concluderà con la presentazione delle strutture concorrenti fondamentali per il coordinamento e lo scambio di informazioni tra processi concorrenti.
+
 ## Il modello Fiber
 
-Il supporto di ZIO per il parallelismo e la concorrenza si basa sul modello _Fibers_. Le _fibers_ sono un alternativa ai _thread_, infatti le istruzioni all'interno di una singola fibra vengono eseguite sequenzialmente, ma a differenza dei _thread_, sono più leggere (minor costo in termini di risorse e _context switching_) e possono essere interrotte e/o unite in maniera sicura senza la necessità bloccarsi. Inoltre siccome le _fiber_ sono un tipo di dato, possono essere composte, abilitano al tracciamento degli errori ed è possibile eseguirne a milioni. La stessa cosa non si può dire per i _thread_, dato che accettano una funzione che ritorna `void` e catturano solamente eccezioni di tipo `Throwable`.
+Il supporto di ZIO per il parallelismo e la concorrenza si basa sul modello _Fibers_. Le _fiber_ sono un'alternativa ai _thread_, infatti le istruzioni all'interno di una singola fibra vengono eseguite sequenzialmente, ma a differenza dei _thread_, sono più leggere (minor costo in termini di risorse e _context switching_) e possono essere interrotte in maniera sicura senza la necessità di bloccarsi. Inoltre, essendo le _fiber_ semplicemente un tipo di dato, consentono una gestione a grana fine degli errori, possono essere composte tra loro e possono essere eseguite a milioni contemporaneamente. La stessa cosa non si può dire per i _thread_, dato che accettano una funzione che ritorna `void` e catturano solamente eccezioni di tipo `Throwable`.
 
-Quando viene chiamato il metodo `unsafeRun`, il runtime di ZIO delega l'esecuzione del programma a una `Fiber` che opera all'interno di uno specifico `Executor` (realizzato tramite un _thread pool_). La scelta di quest'ultimo permette di modellare una logica che garantisca _fairness_, e consente di scegliere la modalità di interruzione delle singole _fiber_.
+Quando viene chiamato il metodo `unsafeRun`, il runtime di `ZIO` delega l'esecuzione del programma a una `Fiber` che opera all'interno di uno specifico `Executor` (realizzato tramite un _thread pool_). La scelta dell'`Executor` consente di definire la modalità di interruzione delle _fiber_ e di modellare una logica che garantisca il rispetto della proprietà di _fairness_.
 
-Inoltre, le _fiber_ non forniscono garanzie sul _thread_ sul quale verranno eseguite, infatti a _runtime_ il _thread_, soprattutto nel caso di attività di lunga durata, può cambiare.
+Inoltre, una _fiber_ non può determinare a priori il _thread_ che la eseguirà, infatti questo può cambiare a _runtime_, soprattutto nel caso di attività di lunga durata, può cambiare.
 
 ### Operazioni principali
 
@@ -18,7 +20,7 @@ Le operazioni fondamentali possono essere riassunte in:
     def fork: URIO[R, Fiber[E, A]]
   }
   ```
-- `join`: ritorna il risultato di una computazione concorrente alla _fiber_ corrente. Il tutto avviene in maniera non bloccante, infatti internamente il runtime di ZIO registra una _callback_ che viene eseguita quando il risultato atteso è pronto. In questo modo l'`Executor` può occuparsi di altre _fiber_ evitando la perdita di risorse e tempo;
+- `join`: ritorna il risultato di una computazione concorrente alla _fiber_ corrente. Il tutto avviene in maniera non bloccante, infatti internamente il runtime di `ZIO` registra una _callback_ che viene eseguita quando il risultato atteso è pronto. In questo modo l'`Executor` può occuparsi di altre _fiber_ evitando la perdita di risorse e tempo;
   ```scala
   trait Fiber[+E, +A] {
     def join: IO[E, A]
@@ -45,18 +47,18 @@ Le operazioni fondamentali possono essere riassunte in:
 
 ### Interruzione nel dettaglio
 
-Il _runtime_ di ZIO non ha modo di conoscere la complessità delle istruzioni da eseguire, proprio per questo il controllo sull'interruzione avviene prima ancora dell'esecuzione delle istruzioni. Come conseguenza un _effect_ può essere interrotto preventivamente.
+Il _runtime_ di `ZIO` non ha modo di conoscere preventivamente la complessità delle istruzioni da eseguire, di conseguenza verificherà la presenza o meno di interruzioni prima ancora di eseguire l'_effect_. Quindi l'_effect_ potrebbe essere interrotto a priori, soprattutto nel caso in cui il suo risultato non fosse utilizzato.
 ```scala
 for {
   fiber <- ZIO.succeed(println("Hello, World!")).fork
-  _ <- fiber.interrupt
+  _     <- fiber.interrupt
 } yield ()
 ```
-Nell'esempio proposto, la frase "Hello World!" non sarà mai stampata a video perché l'istruzione può essere interrotta prima ancora che venga eseguita. 
+Nell'esempio proposto, la stampa della frase "Hello World!" potrebbe non avvenire mai.
 
-Un ulteriore implicazione è che, in assenza di una speciale logica, il runtime di ZIO non sa come interrompere singoli blocchi di codice importato con _side effect_. Ad esempio, considerando un programma che stampa i numeri compresi tra `1` e `100000`:
+Un'ulteriore implicazione è che, in assenza di una specifica logica, il _runtime di_ `ZIO` non è in grado di interrompere blocchi di codice importato che racchiudo _side effect_. Ad esempio, considerando un programma che stampa i numeri compresi tra `1` e `100000`:
 ```scala
-val effect: UIO[Unit] =
+val myEffect: UIO[Unit] =
   UIO.succeed {
     var i = 0
     while (i < 100000) {
@@ -66,18 +68,18 @@ val effect: UIO[Unit] =
   }
 
 for {
-  fiber <- effect.fork
-  _ <- fiber.interrupt
+  fiber <- myEffect.fork
+  _     <- fiber.interrupt
 } yield ()
 ```
-In questo caso l'_effect_ non potrà essere interrotto durante la sua esecuzione, perché le interruzioni possono avvenire solamente tra un'istruzione e l'altra, mentre il codice proposto è descritto da una singola espressione. Di solito questo non è un problema perché molti dei programmi ZIO consistono in un elevato numero di piccole istruzioni concatenate dall'operatore `flatMap`, quindi rapidamente interrompibili. In alcune situazioni, quasi sempre per efficienza, può essere necessario eseguire un unico _effect_ monolitico. ZIO permette comunque la sua interruzione tramite costrutti specializzati come `attemptBlockingCancelable`:
+In questo caso `myEffect`, una volta eseguito, non potrà essere interrotto perché le interruzioni possono avvenire solamente tra un'istruzione e l'altra. Di solito questo non è un problema perché molti dei programmi `ZIO` consistono in tante piccole espressioni concatenate dall'operatore `flatMap`, quindi rapidamente interrompibili. In alcune situazioni, quasi sempre per motivi di efficienza, può essere necessario eseguire un unico _effect_ monolitico. `ZIO` permette comunque la sua interruzione tramite appositi costrutti come `attemptBlockingCancelable`:
 ```scala
 def attemptBlockingCancelable(
   effect: => A
 )(cancel: UIO[Unit]): Task[A] =
   ???
 ```
-La funzione essenzialmente descrive un _effect_ che potrebbe richiedere molto tempo, la cui logica di terminazione viene passata in input dal chiamante (azione `cancel`). Il programma precedente, al fine di renderlo interrompibile, può essere riscritto nel seguente modo:
+La funzione essenzialmente descrive un _effect_ che può richiedere molto tempo, la cui logica di terminazione viene fornita dal chiamante (`cancel`). Il programma precedente può essere reso interrompibile nel seguente modo:
 ```scala
 import java.util.concurrent.atomic.AtomicBoolean
 import zio.blocking._
@@ -94,42 +96,29 @@ def effect(canceled: AtomicBoolean): Task[Unit] =
   )
 
 for {
-  ref <- ZIO.succeed(new AtomicBoolean(false))
+  ref   <- ZIO.succeed(new AtomicBoolean(false))
   fiber <- effect(ref).fork
-  _ <- fiber.interrupt
+  _     <- fiber.interrupt
 } yield ()
 ```
-In questo modo l'_effect_ può essere interrotto in maniera sicura, anche durante l'esecuzione, impostando l'`AtomicBoolean` a `true` e causando la rottura del ciclo `while`.
+Adesso l'_effect_ può essere interrotto in maniera sicura, anche durante l'esecuzione, impostando l'`AtomicBoolean` a `true` e causando la rottura del ciclo `while`.
 
-Qualsiasi parte di un _effect_ ZIO può essere sia _interrompibile_ (default), che _non interrompibile_, ZIO mette a disposizione degli operatori di controllo dell'"interrompibilità":
+Qualsiasi porzione di un _effect_ può essere sia _interrompibile_ (default), che _non interrompibile_, a tal proposito `ZIO` mette a disposizione degli operatori per la loro gestione:
 ```scala
 val uninterruptible: UIO[Unit] =
   UIO(println("Doing something really important"))
-  .uninterruptible
+    .uninterruptible
 
 val interruptible: UIO[Unit] =
   UIO(println("Feel free to interrupt me if you want"))
-  .interruptible
+    .interruptible
 ```
 Come per le _fiber_, anche gli operatori `uninterruptible` e `interruptible` sono associati a delle regole di _scope_:
 
-1. i combinatori proposti si applicano all'intero _scope_ in cui sono chiamati. Ad esempio, nel caso di `(zio1 *> zio2 *> zio3).uninterruptible`, tutti e tre gli _effect_ saranno non interrompibili;
+1. i combinatori proposti si applicano all'intero _scope_ in cui sono eseguiti. Ad esempio, nel caso di `(zio1 *> zio2 *> zio3).uninterruptible`, tutti e tre gli _effect_ saranno non interrompibili;
 2. gli _scope_ interni hanno precedenza su quelli esterni. Nel caso di `(zio1 *> zio2.interruptible *> zio3).uninterruptible`, data la precedenza, `zio2` è interrompibile. 
 
-Inoltre l'interruzione non ritorna finché tutta la logica associata all'_effect_ interrotto non ha completato l'esecuzione. Un esempio esplicativo può essere il seguente:
-```scala
-for {
-  promise <- Promise.make[Nothing, Unit]
-  effect = promise.succeed(()) *> ZIO.never
-  finalizer = ZIO.succeed(println("Closing file"))
-    .delay(5.seconds)
-  fiber <- effect.ensuring(finalizer).fork
-  _ <- promise.await
-  _ <- fiber.interrupt
-  _ <- ZIO.succeed(println("Done interrupting"))
-} yield ()
-```
-In questo caso l'`interrupt` avrà effetto, cioè completerà, solo passati `5` secondi e una volta stampato _"Closing file"_. L'unico modo per eseguire `interrupt` senza attendere la sua terminazione è marcarlo come concorrente tramite `fork`:
+Anche l'operazione `interrupt` può richiedere del tempo per completare. Per esempio, se all'_effect_ sono stati associati dei _finalizzatori_, `interrupt` può ritornare solo una volta che questi hanno terminato la propria esecuzione. L'unico modo per evitare di attendere il completamento di `interrupt`, è eseguire quest'ultimo in modo concorrente tramite `fork`.
 ```scala
 for {
   promise <- Promise.make[Nothing, Unit]
@@ -142,9 +131,9 @@ for {
   _ <- ZIO.succeed(println("Done interrupting"))
 } yield ()
 ```
-Nella seconda versione, prima verrà stampato _"Done interrupting"_ e `5` secondi dopo anche _"Closing file"_.
+Nell'esempio proposto, se non si fosse utilizzato l'operatore `fork` anche per l'interruzione, `interrupt` avrebbe avuto effetto solo a seguito dei `5` secondi e della stampa a video (_"Closing file"_). Mentre eseguendo `fork` in maniera concorrente, prima verrà stampato _"Done interrupting"_ e `5` secondi dopo anche _"Closing file"_.
 
-Infine ZIO consente di evitare di attendere il completamento dell'interruzione di _effect_ grazie all'operatore `disconnect`. Considerando due _effect_, `a` e `b`, nel caso in cui il secondo venisse disconnesso, e fosse chiamato `interrupt`, il programma attenderebbe solo la terminazione di `a`:
+Infine, marcando un _effect_ con l'operatore `disconnect` si evita di attendere il completamento dei _finalizzatori_ associati, durante l'attività di interruzione. Considerando due _effect_, `a` e `b`, eseguiti parallelamente, nel caso in cui il secondo venisse disconnesso, la funzione `interrupt` attenderebbe solo la terminazione di `a`:
 ```scala
 val a: URIO[Clock, Unit] =
   ZIO.never
@@ -165,23 +154,23 @@ for {
 } yield ()
 ```
 
-### Supervisione delle Fibers
+### Supervisione delle Fiber
 
-Similmente a quanto succede in un _modello ad attori_, in cui il padre supervisiona i figli, anche ZIO implementa un **modello di supervisione delle _fibers_**:
+Similmente a quanto succede in un _modello ad attori_, in cui il padre supervisiona i figli, anche `ZIO` implementa un **modello di supervisione delle _fiber_**:
 
 1. ogni _fiber_ è associata ad uno ***scope***;
-2. ogni _fiber_ viene biforcata all'interno di uno _scope_, che se non specificato, è lo stesso della _fiber_ corrente;
+2. ogni _fiber_, di default, viene avviata all'interno dello _scope_ del padre;
 3. lo _scope_ di una _fiber_ viene chiuso a seguito della sua terminazione per successo, errore o interruzione;
-4. quando uno _scope_ viene chiuso, tutto le _fiber_ al suo interno terminano.
+4. la chiusura di uno _scope_ provoca la terminazione di tutte le _fiber_ al suo interno.
 
-L'implicazione di questo modello è che, di default, le _fiber_ non possono vivere al di fuori del padre. Nel caso in cui fosse necessario creare un processo indipendente da quello padre, è possibile effettuare il `fork` di una _fiber_ nello _scope_ globale, tramite il metodo `forkDaemon`.
+L'implicazione di questo modello è che, di base, le _fiber_ non possono vivere al di fuori del padre. Nel caso in cui fosse necessario creare un processo indipendente da quello padre, è possibile effettuare il `fork` di una _fiber_ nello _scope_ globale, tramite il metodo `forkDaemon`.
 ```scala
 trait ZIO[-R, +E, +A] {
   def forkDaemon: URIO[R, Fiber[E, A]]
 }
 ```
 
-Infine, normalmente le _fiber_ vengono eseguite all'interno dell'`Executor` di default di ZIO, ma può capitare di dover modificare l'`Executor`, questo è possibile tramite i combinatori `lock` e `on`:
+Di solito le _fiber_ vengono eseguite all'interno dell'`Executor` di default di `ZIO`, ma questo può essere modificato tramite le funzioni `lock` e `on`:
 ```scala
 import scala.concurrent.ExecutionContext
 trait ZIO[-R, +E, +A] {
@@ -189,12 +178,12 @@ trait ZIO[-R, +E, +A] {
   def on(executionContext: ExecutionContext): ZIO[R, E, A]
 }
 ```
-L'operatore `lock` è quello più utilizzato dei due, e permette di scegliere l'`Executor` dentro il quale sarà eseguito l'_effect_. Inoltre, `lock` è _regionale_ (***regional***), ciò significa che:
+L'operatore `lock` è quello maggiormente impiegato, e permette di scegliere l'`Executor` dentro il quale sarà eseguito l'_effect_. Inoltre `lock` stabilisce delle regole:
 
-1. quando un _effect_ viene associato (_locked_) all'interno di un `Executor`, saranno associate tutte le sue parti;
+1. assegnare (_lock_) un _effect_ a un certo `Executor`, implica assegnare tutte le sue parti;
 2. gli _scope_ interni hanno precedenza su quelli più esterni.
 
-La seconda regola può essere illustrata mediante il seguente esempio:
+La seconda regola può essere esplicitata mediante il seguente esempio:
 ```scala
 lazy val executor1: Executor = ???
 lazy val executor2: Executor = ???
@@ -210,9 +199,9 @@ In questo caso, `doSomething` verrà sicuramente eseguito all'interno di `execut
 
 ## Operatori concorrenti
 
-Anche per quanto riguarda la concorrenza, ZIO offre diversi operatori che permettono di astrarre gli aspetti legati alle _fiber_, al fine di supportare il programmatore durante lo sviluppo di programmi concorrenti. I combinatori di base sono `raceEither` e `zipPar`, entrambi rappresentano delle operazioni binarie che permettono di combinare due valori:
+Anche per quanto riguarda la concorrenza, `ZIO` offre diversi operatori che permettono di astrarre dagli aspetti legati alle _fiber_, al fine di supportare il programmatore durante lo sviluppo di programmi concorrenti. Le funzioni di base sono `raceEither` e `zipPar`, entrambe rappresentano delle operazioni binarie che combinano due valori:
 
-- `zipPar`: descrive l'esecuzione di due _effects_ (`self` e `that`) in parallelo, l'attesa per il loro completamento e successivamente la restituzione dei risultati di entrambi; 
+- `zipPar`: permette di eseguire due _effect_ (`self` e `that`) parallelamente, restituendo al termine i risultato di entrambi; 
 - `raceEither`: equivalente a `zipPar` ma il risultato restituito è quello del primo _effect_ che termina con successo. Il secondo, cioè quello ancora in esecuzione, sarà interrotto poiché non più necessario.
 
 ```scala
@@ -227,11 +216,11 @@ trait ZIO[-R, +E, +A] { self =>
 }
 ```
 
-Il combinatore `zipPar` può essere utilizzato per implementare altri operatori tra cui `foreachPar` e `collectAllPar`, versione parallela di `foreach` e `collectAll`.
+Il combinatore `zipPar` può essere utilizzato per implementare altri operatori tra cui `foreachPar` e `collectAllPar`, versioni parallele rispettivamente di `foreach` e `collectAll`.
 
 ## Strutture concorrenti: Ref - Shared State
 
-Molto spesso lo sviluppo di programmi concorrenti richiede la condivisione di uno stato tra le _fiber_, al fine di permettere uno scambio di informazioni. In ZIO questa necessità viene soddisfatta dalla struttura `Ref`, che può essere vista come un'alternativa puramente funzionale all'`AtomicReference`. Come nei casi precedenti, anche `Ref` descrive, e non effettua direttamente, una modifica di stato. In questo modo è possibile modellare programmi che rispettano la _trasparenza referenziale_ al fine di abilitare il programmatore a ragionare sull'applicativo mediante _substitution model_.
+Molto spesso lo sviluppo di programmi concorrenti richiede la condivisione di uno stato tra i processi (_fiber_), al fine di scambiare informazioni. In `ZIO` questa necessità viene soddisfatta dalla struttura `Ref`, che può essere vista come un'alternativa puramente funzionale all'`AtomicReference`. In linea con la filosofia di `ZIO`, `Ref` consente di fornire una descrizione di modifica di stato. In questo modo è possibile modellare programmi che rispettano la _trasparenza referenziale_ così da permettere al programmatore di ragionare sull'applicativo mediante _substitution model_.
 ```scala
 trait Ref[A] {
   def modify[B](f: A => (B, A)): UIO[B]
@@ -248,7 +237,7 @@ object Ref {
     ??? 
 }
 ```
-Ogni combinatore di `Ref` ritorna uno `ZIO` che descrive una modifica dello stato di `Ref` stesso. Un semplice esempio applicativo:
+Ogni operatore di `Ref` restituisce uno `ZIO` che descrive una modifica dello stato di `Ref` stesso. Un semplice esempio applicativo:
 ```scala
 def increment(ref: Ref[Int]): UIO[Unit] =
   for {
@@ -258,15 +247,15 @@ def increment(ref: Ref[Int]): UIO[Unit] =
 ```
 Il metodo `increment` riceve un `Ref` in input e restituisce un _effect_ che ne descrive l'incremento.
 
-`Ref` oltre ad essere un'alternativa puramente funzionale, si integra con la programmazione concorrente poiché l'accesso allo stato, da parte di più processi, avviene in maniera sicura. `Ref` ha però una limitazione, dalla prospettiva del chiamante, `update` legge sempre il vecchio valore e scrive quello nuovo in una singola "transazione" garantendo atomicità. Questo non è assicurato nel caso in cui `Ref` venga combinato con una serie di operatori. Per esempio, il comportamento `ref.get.flatMap(n => ref.set(n + 1))` è indeterminato perché molteplici _fiber_, eseguendo contemporaneamente, possono leggere lo stesso valore provocando la perdita di alcuni aggiornamenti. Delle buone pratiche da seguire per ovviare a questi tipi di problemi:
+`Ref` oltre ad essere un'alternativa puramente funzionale, si integra con la programmazione concorrente poiché l'accesso allo stato, da parte di più processi, avviene in maniera sicura. `Ref` ha però un limite, dalla prospettiva del chiamante, `update` legge sempre il vecchio valore e scrive quello nuovo in una singola "transazione" garantendo atomicità. Questo non è assicurato nel caso in cui `Ref` venga combinato con una serie di operatori. Per esempio, il comportamento `ref.get.flatMap(n => ref.set(n + 1))` è imprevedibile perché molteplici _fiber_, eseguendo contemporaneamente, possono leggere lo stesso valore provocando la perdita di alcuni aggiornamenti. Delle buone pratiche da seguire per ovviare a questi tipi di problemi:
 
 - inserire tutte le porzioni di uno stato che devono essere consistenti tra loro all'interno di una singola `Ref`;
 - modificare una `Ref` sempre tramite una singola operazione;
 - utilizzare sempre gli operatori `modify` e `update` al posto di `get` e `set` perché, essendo singole operazioni, garantiscono automaticamente l'atomicità.
 
-Alternativamente, è possibile comporre operazioni in una `Ref` tramite la funzionalità **STM** (Software Transactional Memory) di ZIO.
+Alternativamente, è possibile comporre operazioni in una `Ref` tramite la funzionalità **STM** (Software Transactional Memory) di `ZIO`.
 
-Nel caso di `modify`, il parametro passatogli in input deve essere una funzione pura, cioè non deve produrre _side effects_, così che eseguendo l'operazione una sola volta, oppure tante, porterebbe sempre allo stesso stato. Nel caso si volesse passare a `modify` una `f` che produce _side effects_, si deve ricorrere al tipo di dato `Ref.Synchronized`.  
+Nel caso di `modify`, il parametro passatogli in input deve essere una funzione pura, cioè non deve produrre _side effect_, in questo modo si otterrebbe sempre lo stesso stato indipendentemente dal numero di esecuzioni. Se si volesse fornire a `modify` una funzione `f` che produce _side effect_, si dovrebbe ricorrere al tipo di dato `Ref.Synchronized`.  
 ```scala
 trait Synchronized[A] {
   def modifyZIO[R, E, B](f: A => ZIO[R, E, (B, A)]): ZIO[R, E, B]
@@ -276,10 +265,11 @@ Internamente `Synchronized` è implementato tramite un semaforo (`Semaphore`) co
 
 ### Stato locale alla Fiber: FiberRef
 
-A volte, può essere necessario mantenere uno stato interno ad ogni _fiber_, in ZIO è possibile definendo un `FiberRef`. Questo, oltre a comporsi di un valore iniziale come in `Ref`, definisce altre due operazioni:
+In caso di necessità, tramite la struttura `FiberRef` è possibile mantenere uno stato interno ad ogni _fiber_. `FiberRef`, oltre a comporsi di un valore iniziale, come nel caso di `Ref`, definisce due operazioni:
  
-- `fork`: descrive l'eventuale processo di modifica del valore `ref` della _fiber_ padre, che deve essere copiato nel figlio;
-- `join`: descrive come il valore della `ref` del padre sarà combinata con quella del figlio una volta terminato.
+- `fork`: descrive l'eventuale trasformazione che la variabile `ref`, della _fiber_ padre, deve subire prima di essere copiata nel figlio;
+- `join`: descrive in che modo il valore della `ref` padre sarà combinato con quello del figlio.
+
 ```scala
 def make[A](
   initial: A,
@@ -288,7 +278,7 @@ def make[A](
 ): UIO[FiberRef[A]] =
   ???
 ```
-Un programma esemplificativo può essere la realizzazione di un _logger_ che permette di visualizzare la struttura di come le computazioni vengono parallelizzate (`fork`) e riunite (`join`).
+Un esempio applicativo può essere la realizzazione di un _logger_ che permette di visualizzare in che modo le computazioni vengono parallelizzate (`fork`) e riunite (`join`).
 ```scala
 final case class Tree[+A](head: A, tail: List[Tree[A]])
 
@@ -325,7 +315,7 @@ def log(ref: FiberRef[Log])(string: String): UIO[Unit] =
 
 ## Strutture concorrenti: Promise - Work synchronization
 
-`Ref` consente di condividere lo stato tra diverse _fiber_, ma non può essere utilizzato come meccanismo di sincronizzazione. Per ovviare a questa mancanza, ZIO mette a disposizione un'altra struttura concorrente chiamata `Promise`, di seguito viene proposta una versione semplificata della sua interfaccia.
+`Ref` consente di condividere lo stato tra diverse _fiber_, ma non può essere utilizzato come meccanismo di sincronizzazione. A tal proposito, `ZIO` dispone di un'altra struttura concorrente chiamata `Promise`; di seguito viene fornita una rappresentazione semplificata della sua interfaccia.
 ```scala
 trait Promise[E, A] {
   def await: IO[E, A]
@@ -333,8 +323,7 @@ trait Promise[E, A] {
   def succeed(a: A): UIO[Boolean]
 }
 ```
-
-Una `Promise` può essere vista come un contenitore, pieno o vuoto, che racchiude una _failure_ `E` oppure un valore `A`, inoltre può essere completata, tramite `fail` o `succeed`, solamente una volta. Il risultato di una `Promise` può essere recuperato mediante l'operatore "bloccante" `await`.  
+Una `Promise` può essere vista come un contenitore, pieno o vuoto, che racchiude una _failure_ `E` oppure un valore `A` e che può essere completata, tramite `fail` o `succeed`, solamente una volta. Il risultato di una `Promise` può essere recuperato mediante l'operatore "bloccante" `await`.  
 
 Un semplice utilizzo della `Promise` ai fini di sincronizzazione:
 ```scala
@@ -345,9 +334,9 @@ for {
   _       <- left.join *> right.join
 } yield ()
 ```
-Il programma proposto è deterministico, cioè la stampa a video sarà sempre `"Hello World"`. Quindi si può dire che la `Promise` permette di imporre un'ordinamento lineare tra porzioni di codice concorrente.
+Il programma proposto è deterministico, cioè a video verrà visualizzato sempre `"Hello World"`. Quindi si può concludere che la `Promise` impone un'ordinamento lineare tra porzioni di codice concorrente.
 
-### Promise: Completamento
+### Promise: completamento
 
 Esistono altri modi per completare una `Promise`:
 
@@ -368,13 +357,14 @@ trait Promise[E, A] {
 }
 ```
 
-### Promise: Attesa
+### Promise: attesa
 
-ZIO offre diversi metodi che permetto di osservare lo stato di una `Promise`:
+`ZIO` offre diversi metodi per osservare lo stato di una `Promise`:
 
 - `await`: sospende la _fiber_ corrente fino al completamento della `Promise`, e ne ritorna l'_effect_;
 - `isDone`: permette di controllare se la `Promise` è stata completata;
-- `poll`: ritorna un `Option[IO[E, A]]` che varrà `None`, se la `Promise` non è stata ancora completata, oppure `Some` se l'_effect_ è pronto per essere restituito.
+- `poll`: ritorna un `Option[IO[E, A]]` che varrà `None` se la `Promise` non è stata ancora completata, oppure `Some` in caso contrario.
+<!-- se l'_effect_ è pronto per essere restituito. -->
 ```scala
 trait Promise[E, A] {
   def await: IO[E, A]
@@ -383,9 +373,9 @@ trait Promise[E, A] {
 }
 ```
 
-### Promise: Interruzione
+### Promise: interruzione
 
-Le _Promises_ supportano il modello di interruzione di ZIO. Ciò significa che il completamento di una `Promise` con un _effect_ interrotto, causerà l'interruzione di tutte le _fiber_ in attesa su quella `Promise`. 
+Le _Promise_ supportano il modello di interruzione di `ZIO`. Ciò significa che il completamento di una `Promise`, il cui risultato è un _effect_ che è stato interrotto, causerà l'interruzione di tutte le _fiber_ in attesa su quella `Promise`. 
 
 Una `Promise` può essere interrotta anche manualmente tramite le funzioni `interrupt` e `interruptAs`.
 ```scala
@@ -398,7 +388,7 @@ Tramite il parametro `fiberId` di `interruptAs` è possibile specificare la _fib
 
 ## Strutture concorrenti: Queue - Work distribution
 
-Similmente ad una `Promise`, una `Queue` consente alle _fiber_ di sospendersi al fine di attendere l'inserimento o la richiesta di un valore della coda. A differenza della prima, la `Queue` permette di gestire molteplici valori, infatti il suo scopo principale è quello di distribuzione del lavoro tra le _fiber_. Ovviamente la struttura garantisce un accesso sicuro ai valori in caso di concorrenza.
+Similmente ad una `Promise`, una `Queue` consente alle _fiber_ di sospendersi al fine di attendere l'inserimento o l'estrazione di un valore della coda. A differenza della prima, la `Queue` permette di gestire molteplici valori, infatti il suo scopo principale è quello di distribuire del lavoro tra le _fiber_. Ovviamente la struttura garantisce un accesso sicuro ai valori in caso di concorrenza.
 
 Le operazioni fondamentali di una `Queue` sono `offer` e `take`:
 ```scala
@@ -409,45 +399,45 @@ trait Queue[A] {
 ```
 La prima consente di inserire un valore nella coda, mentre `take` sospende (blocca semanticamente) la _fiber_ corrente finché non è presente un valore.
 
-### Queue: Varianti
+### Queue: varianti
 
-Le due principali tipologie di code sono quella **`unbounded`**, che non ha una capacità massima, e quella **`bounded`** che definisce il numero massimo di valori che può contenere (_capacity_). Quest'ultima permette di prevenire problemi legati alla memoria (_memory leak problem_), ma richiede di definire la logica di gestione nel caso in cui si tenti di inserire un valore in una coda piena. 
+Le due principali tipologie di code sono quella **`unbounded`**, che non ha una capacità massima, e quella **`bounded`** che può contenere un numero limitato di valori (_capacity_). Quest'ultima permette di prevenire problemi legati alla memoria (_memory leak problem_), ma richiede di specificare la logica di gestione degli inserimenti nel caso in cui la coda fosse piena
 
-A tal proposito, ZIO mette a disposizione tre strategie:
+A tal proposito, `ZIO` definisce tre strategie:
 
-- ***Back Pressure***: sospende il chiamante del metodo `offer` finché la coda è satura. Questa strategia evita la perdita di informazioni, ma obbliga i _consumers_ ad elaborare tutti i valori prima di raggiungere i più recenti, quindi non è la scelta ideale per un'applicazione finanziaria.
+- ***Back Pressure***: sospende il chiamante del metodo `offer` finché la coda è piena. Questa strategia evita la perdita di informazioni, ma obbliga i _consumers_ ad elaborare tutti i valori prima di raggiungere i più recenti;
   ```scala
   for {
     queue <- Queue.bounded[String](2)
-    _ <- queue.offer("ping")
-    .tap(_ => Console.printLine("ping"))
-    .forever
-    .fork
+    _     <- queue.offer("ping")
+                  .tap(_ => Console.printLine("ping"))
+                  .forever
+                  .fork
   } yield ()
   ```
-- ***Sliding Strategy***: in questo caso, l'inserimento di un valore in una coda già piena provocherà la rimozione del primo elemento della `Queue`. Questa strategia deve essere applicata quando i valori più recenti hanno un valore superiore rispetto a quelli precedentemente aggiunti. Per realizzare una coda scorrevole ci si avvale del costruttore `sliding`.
+- ***Sliding Strategy***: in questo caso, l'inserimento di un valore in una coda già piena provocherà la rimozione del primo elemento della `Queue`. Questa strategia deve essere applicata quando i valori più recenti hanno la priorità. Per realizzare una coda scorrevole ci si avvale del costruttore `sliding`.
   ```scala
   for {
     queue <- Queue.sliding[Int](2)
-    _ <- ZIO.foreach(List(1, 2, 3))(queue.offer)
-    a <- queue.take
-    b <- queue.take
+    _     <- ZIO.foreach(List(1, 2, 3))(queue.offer)
+    a     <- queue.take
+    b     <- queue.take
   } yield (a, b)
   ``` 
   In questo esempio i valori ritornati saranno sempre gli ultimi due (`2` e `3`).
-- ***Dropping Strategy***: la richiesta di inserimento verrà scartata nel caso in cui la coda abbia raggiunto la capacità massima. Questa strategia ha senso quando si vuole mantenere una distribuzione dei valori piuttosto che avere quelli più recente, come nel caso dei dati meteorologici. Questa tipologia di coda può essere realizzata tramite il costruttore `dropping`.
+- ***Dropping Strategy***: la richiesta di inserimento verrà scartata nel caso in cui la coda abbia raggiunto la capacità massima. In questa strategia l'obiettivo è mantenere una distribuzione dei valori piuttosto che avere quelli più recenti, come nel caso dei dati meteorologici. La strategia in questione può essere realizzata avvalendosi del costruttore `dropping`.
   ```scala
   for {
     queue <- Queue.dropping[Int](2)
-    _ <- ZIO.foreach(List(1, 2, 3))(queue.offer)
-    a <- queue.take
-    b <- queue.take
+    _     <- ZIO.foreach(List(1, 2, 3))(queue.offer)
+    a     <- queue.take
+    b     <- queue.take
   } yield (a, b)
   ```
 
-### Queue: Chiusura
+### Queue: chiusura
 
-Siccome potrebbero esserci più _fiber_ in attesa di inserire o prelevare dei valori da una coda, si vuole avere un modo per interrompere quelle _fiber_ nel caso in cui la `Queue` non fosse più utile. Il metodo `shutdown` fornisce proprio quello strumento.
+Nel caso in cui una `Queue` non fosse più necessaria, è possibile chiuderla tramite il metodo `shutdown`. La chiusura implica l'interruzione delle _fiber_ in attesa sulla coda.
 ```scala
 trait Queue[A] {
   def awaitShutDown: UIO[Unit]
@@ -455,14 +445,15 @@ trait Queue[A] {
   def shutdown: UIO[Unit]
 }
 ```
-Gli altri due metodi consentono di interrogare la coda al fine di verificarne la chiusura (`isShutdown`), e di sospendersi finché la coda rimane aperta (`awaitShutDown`).
+Come intuibile dal nome, `isShutdown` verifica se la coda è stata chiusa, mentre `awaitShutdown` permette di attendere la chiusura.
 
 ## Strutture concorrenti: Hub - Broadcasting
 
-Una classe di problema meno diffusa rispetto a quella di distribuzione del lavoro, è il _broadcasting_: ogni valore comunicato deve essere ricevuto da ogni _consumer_. La soluzione di ZIO a tale problema, è la struttura dati `Hub`, la quale assegna ad ogni _consumer_ uno specifico indice, così che i _consumer_ accedano a posizioni distinte della struttura. Un `Hub` è definito in termini di due operazioni fondamentali:
+Una classe di problema meno diffusa rispetto a quella di distribuzione del lavoro, è il _broadcasting_: ogni valore comunicato deve essere ricevuto da tutti i _consumer_. La soluzione di `ZIO` a tale problema, è la struttura dati `Hub`, la quale assegna ad ogni _consumer_ uno specifico indice, così che i _consumer_ accedano a posizioni distinte della struttura. Un `Hub` è definito in termini di due operazioni fondamentali:
 
-- `publish`: similmente a a quanto succede con il metodo `offer` di `Queue`, il metodo consente di pubblicare un valore all'interno della struttura;
-- `subscribe`: permette di sottoscriversi per ottenere i valori dal `Hub` sotto forma di `Dequeue`. I _consumer_ continueranno a ricevere valori fintanto che sono sottoscritti.
+- `publish`: similmente a a quanto succede con il metodo `offer` di `Queue`, la funzione consente di pubblicare un valore all'interno della struttura;
+- `subscribe`: permette di ottenere i valori che attraversano l'`Hub` sotto forma di `Dequeue`. I _consumer_ continueranno a ricevere valori fintanto che sono sottoscritti.
+
 ```scala
 sealed abstract class Hub[A] {
   def publish(a: A): UIO[Boolean] = ???
@@ -490,7 +481,7 @@ Idealmente, questo tipo di `Hub` può essere rappresentato tramite un vettore co
 - previene problemi di _memory leaks_ causati da un _producer_ troppo veloce rispetto ai _consumer_;
 - propaga la strategia di _back pressure_ lungo tutto il sistema.
 
-Un'altra variante di `Hub` è quello di tipo ***sliding*** che, come si evince dal nome, implementa la strategia _sliding_ al fine di liberare spazio eliminando i dati meno recenti. Questa tipologia garantisce il completamento immediato dell'attività di pubblicazione (_publishing_).
+Un'altra variante di `Hub` è quella di tipo ***sliding*** che consente di liberare spazio eliminando i dati meno recenti. Questa tipologia garantisce il completamento immediato dell'attività di pubblicazione (_publishing_) dei valori.
 ```scala
 object Hub {
   def sliding[A](requestedCapacity: Int): UIO[Hub[A]] =
@@ -498,7 +489,7 @@ object Hub {
 }
 ``` 
 
-Infine, l'ultima variante è quella di tipo `Dropping`, in cui la pubblicazione di un valore nel caso di spazio indisponibile, provoca il fallimento dell'operazione. Il fallimento o il successo di questa viene segnalato tramite un valore `Boolean` ritornato dal metodo `publish`.
+Infine, l'ultima variante è quella di tipo ***dropping***, in cui la pubblicazione di un valore, in mancanza di spazio, provoca il fallimento dell'operazione.
 ```scala
 object Hub {
   def dropping[A](requestedCapacity: Int): UIO[Hub[A]] =
@@ -522,23 +513,25 @@ sealed trait Hub[A] {
   def toQueue: Enqueue[A]
 }
 ```
-Proprio come una `Queue`, anche l'`Hub` può essere chiuso (`shutdown`) causando l'interruzione immediata di qualsiasi _fiber_ che tenterà di inserire o ricevere tramite sottoscrizione un valore dalla struttura. Inoltre è possibile conoscere il numero di messaggi presenti all'interno dell'`Hub` tramite l'operatore `size`. Infine la funzione `toQueue` consente di interagire con la struttura come se fosse una coda su cui è possibile solo scrivere. 
+Proprio come una `Queue`, anche l'`Hub` può essere chiuso (`shutdown`) causando l'interruzione immediata di qualsiasi _fiber_ che tenterà di inserire o ricevere tramite sottoscrizione un valore dalla struttura. Inoltre è possibile conoscere il numero di messaggi presenti all'interno dell'`Hub` sfruttando l'operatore `size`. Infine la funzione `toQueue` consente di interagire con la struttura come se fosse una coda su cui è possibile solo scrivere. 
 
 
 ## Strutture concorrenti: Semaphore - Work limiting
 
-Un `Semaphore` viene creato con un certo numero di "permessi" ed è definito attraverso un unico metodo `withPermits`.
+Un `Semaphore` è una struttura che possiede un certo numero di "permessi", specificato all'atto di creazione, ed è definito attraverso un unico metodo denominato `withPermits`.
 ```scala
 trait Semaphore {
   def withPermits[R, E, A](n: Long)
     (task: ZIO[R, E, A]): ZIO[R, E, A]
 }
 ```
-Ogni _fiber_ che chiama _withPermits_ deve prima "acquisire" il numero di permessi specificato all'atto della creazione. Se i permessi sono disponibili allora questi vengono decrementati e la _fiber_ può procedere con l'esecuzione dell'attività. In caso contrario, la _fiber_ si sospenderà finché non ci saranno permessi disponibili. 
+Ogni _fiber_ che vuole eseguire il blocco di codice di _withPermits_ deve prima "acquisire" un permesso. Se il numero dei permessi è maggiore di zero allora il contatore viene decrementato e la _fiber_ può procedere con l'esecuzione dell'attività. In caso contrario, la _fiber_ si sospenderà finché i permessi non ritorneranno disponibili. 
 
-La struttura `Semaphore` permette quindi di limitare il grado di concorrenza, cioè il numero massimo di _fiber_ che accedo contemporaneamente a un certo blocco di codice, evitando modifiche del programma. 
+La struttura `Semaphore` permette quindi di limitare il grado di concorrenza, cioè il numero massimo di _fiber_ che accedono contemporaneamente a un certo blocco di codice. 
 
-Un caso d'uso comune del `Semaphore` è la creazione di strutture dati _concurrently safe_. L'idea di base è quella di implementare un `Semaphore` con un solo permesso, così che il blocco di codice protetto possa essere eseguito da una solo _fiber_ alla volta. In questo modo un `Semaphore` agisce come una _lock_ o un _synchronized block_ della programmazione concorrente tradizionale, evitando però di bloccare i _thread_ di sistema. Un esempio applicativo può essere la creazione di una `Ref` protetta da un semaforo.
+Un caso d'uso comune del `Semaphore` è la creazione di strutture dati _concurrently safe_. L'idea di base è quella di implementare un `Semaphore` con un solo permesso, così che il blocco di codice protetto possa essere eseguito da una sola _fiber_ alla volta. In questo modo un `Semaphore` agisce come una _lock_ o un _synchronized block_ della programmazione concorrente tradizionale, evitando però di bloccare i _thread_ di sistema. 
+
+Un esempio applicativo può essere la creazione di una `Ref` protetta da un semaforo.
 ```scala
 trait RefM[A] {
   def modify[R, E, B](f: A => ZIO[R, E, (B, A)]): 
@@ -564,6 +557,6 @@ object RefM {
     }
 }
 ```
-Come mostrato nell'esempio, l'implementazione del metodo `modify` della `Ref` è racchiuso all'interno di `withPermit`. In questo modo se due _fiber_ tentano di modificare in maniera concorrente la `Ref`, la prima otterrà il valore, eseguirà l'_effect e aggiornerà lo stato, mentre la seconda sarà sospesa a causa di un numero insufficiente di permessi.
+Come mostrato nell'esempio, l'implementazione del metodo `modify` della `Ref` è racchiuso all'interno di `withPermit`. In questo modo se due _fiber_ tentano di modificare in maniera concorrente la `Ref`, la prima otterrà il permesso e potrà eseguire l'_effect_ che aggiornerà lo stato, mentre la seconda si sospenderà.
 
 
