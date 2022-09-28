@@ -459,10 +459,6 @@ sealed abstract class Hub[A] {
   def publish(a: A): UIO[Boolean] = ???
   def subscribe: ZIO[Scope, Nothing, Dequeue[A]] = ???
 }
-richiede un valore assegnato in un certo ind
-object Hub {
-  def bounded[A](capacity: Int): UIO[Hub[A]] = ???
-}
 ```
 Concettualmente, ogni _consumer_ interagisce con la struttura come se fosse un canale le cui estremità vengono rispettivamente rappresentate dalle interfacce `Enqueue` e `Dequeue`.
 
