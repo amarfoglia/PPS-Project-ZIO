@@ -12,7 +12,8 @@ scala-xml = { module = "org.scala-lang.modules:scala-xml_3", version = "2.1.0" }
 zio = { module = "dev.zio:zio_3", version.ref = "zio" }
 zio-test = { module = "dev.zio:zio-test_3", version.ref = "zio"}
 zio-junit = { module = "dev.zio:zio-test-junit_3", version.ref = "zio"}
-
+zio-streams = { module = "dev.zio:zio-streams_3", version.ref = "zio" }
+zio-json = { module = "dev.zio:zio-json_3", version = "0.3.0" }
 
 [bundles]
 scala-test = ["junit", "scala-test", "scala-junit", "zio-junit"]
