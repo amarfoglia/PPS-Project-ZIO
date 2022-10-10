@@ -14,7 +14,7 @@ Concettualizzare un test come un _effect_:
 
 Ogni test scritto all'interno del costrutto `test` ritorna uno `ZIO[R, E, TestResult]`, dove `TestResult` è un alias per `BoolAlgebra[FailureDetails]` e `FailureDetails` contiene i dettagli relativi al risultato di una specifica asserzione.
 
-Un banale esempio di test che impiega l'asserzione di ZIO:
+Di seguito viene proposto un banale esempio di test che si avvale dell'asserzione di `ZIO`.
 ```scala
 object ExampleSpec extends ZIOSpecDefault:
   def spec = suite("ExampleSpec")(
@@ -23,7 +23,7 @@ object ExampleSpec extends ZIOSpecDefault:
     }
   )
 ```
-Siccome un test (nel esempio `spec`) ne può contenere altri innestati su più livelli, il _framework_ dovrà scorrerli tutti prendendosi automaticamente carico degli aspetti legati all'ambiente di esecuzione e garantendo la consistenza dei risultati tra piattaforme. Uno `ZSpec` è quindi una struttura dati ad albero, le cui fogli sono test. Inoltre `assertZIO` altro non è, che una composizione degli operatori `map` e `assert` e può essere riscritto mediante _for comprehension_:
+Siccome un test (nel esempio `spec`) ne può contenere altri innestati su più livelli, il _framework_ dovrà scorrerli tutti prendendosi automaticamente carico degli aspetti legati all'ambiente di esecuzione e garantendo la consistenza dei risultati tra piattaforme. Uno `ZSpec` è quindi una struttura dati ad albero, le cui foglie sono test. Inoltre `assertZIO` altro non è che una composizione degli operatori `map` e `assert` e può essere riscritto mediante _for comprehension_:
 ```scala
 object ExampleSpec extends ZIOSpecDefault {
   def spec = suite("ExampleSpec")(
@@ -96,7 +96,7 @@ test("foreachPar preserves ordering") {
 
 ## Testing: ZIO services
 
-Quando si sviluppa del codice che internamente sfrutta i servizi di `ZIO`, non è consigliato definire dei test direttamente sull'implementazione valida nell'ambiente di produzione. Ad esempio, nel caso in cui si voglia testare un programma che richiede l'inserimento di una parola da parte dell'utente, sorgono due problemi fondamentali: i valori da verificare devono essere definiti manualmente, con conseguente riduzione del numero dei possibili scenari, e la _continuous integration_ non è supportata.
+Quando si sviluppa del codice che internamente sfrutta i servizi di `ZIO`, non è consigliato definire dei test direttamente sull'implementazione valida nell'ambiente di produzione. Ad esempio, nel caso in cui si voglia testare un programma che richiede l'inserimento di una parola da parte dell'utente, sorgono due problemi fondamentali: i valori da verificare devono essere definiti manualmente, con conseguente riduzione del numero dei possibili scenari e la _continuous integration_ non è supportata.
 
 `ZIO Test` pone rimedio a tali problemi fornendo delle implementazioni ad-hoc dei servizi di `ZIO` (`TestConsole`, `TestClock`, `TestRandom` e `TestSystem`) che consentono di migliorare il livello di _coverage_ del codice. Per ogni test viene creata una copia a se stante dei servizi richiesti, condivisa attraverso l'_environment_.
 
@@ -132,7 +132,7 @@ Un altro servizio di test particolarmente utile per la verifica di programmi con
 Quando si lavora con il servizio `TestClock`, generalmente la definizione di un test implica i seguenti passaggi:
 
 1. esecuzione concorrente (`fork`) dell'_effect_ che dipende dal passaggio del tempo;
-2. regolazione (`adjust`) del `TestClock` al tempo richiesto dal _effect_ per completare;
+2. regolazione (`adjust`) del `TestClock` al tempo richiesto dall'_effect_ per completare;
 3. comparazione dei risultati dell'_effect_ con quelli previsti.
 
 Un esempio in cui si mettono in pratica tutti e tre i passaggi:

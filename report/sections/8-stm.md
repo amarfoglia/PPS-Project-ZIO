@@ -38,7 +38,7 @@ def transfer(
                         to.update(_ + amount)
   } yield ()
 ```
-La logica è corretta perché se la variabile transazionale `from` venisse modifica, la transazione fallirebbe causando il ripristino delle variabili ai valori originali, e l'intera transazione verrebbe rieseguita automaticamente.
+La logica è corretta perché se la variabile transazionale `from` venisse modificata, la transazione fallirebbe causando il ripristino delle variabili ai valori originali, e l'intera transazione verrebbe rieseguita automaticamente.
 
 In alcuni casi potrebbe essere necessario astrarre dalla logica STM, a tal proposito `ZIO` fornisce l'operatore `commit`: converte una transazione in un _effect_. Sfruttando la funzione `commit` è possibile ristrutturare il codice precedente in modo da migliorarne la leggibilità lato chiamante.
 ```scala
@@ -118,7 +118,7 @@ final class TArray[A] private (private val array: Array[TRef[A]]
 ```
 La funzione del `TArray`, in un contesto transazionale, è identica a quella di un classico `Array`, ed è la scelta ottimale in caso di letture e scritture veloci ad accesso casuale.
 
-La creazione di un `TArray` avviene tramite il costruttore `make`, e le funzioni fondamentali sono `apply` e `update`. La prima consente di accedere al valore di un certo indice, mentre la seconda permette di aggiornalo.
+La creazione di un `TArray` avviene tramite il costruttore `make`, e le funzioni fondamentali sono `apply` e `update`. La prima consente di accedere al valore di un certo indice, mentre la seconda permette di aggiornarlo.
 
 Un esempio applicativo di `TArray`, può essere l'implementazione di un operatore `swap` che scambia gli elementi di due indici in una singola transazione.
 ```scala

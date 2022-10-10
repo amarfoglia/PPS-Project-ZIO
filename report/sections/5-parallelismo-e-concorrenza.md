@@ -56,7 +56,7 @@ for {
 ```
 Nell'esempio proposto, la stampa della frase "Hello World!" potrebbe non avvenire mai.
 
-Un'ulteriore implicazione è che, in assenza di una specifica logica, il _runtime di_ `ZIO` non è in grado di interrompere blocchi di codice importato che racchiudo _side effect_. Ad esempio, considerando un programma che stampa i numeri compresi tra `1` e `100000`:
+Un'ulteriore implicazione è che, in assenza di una specifica logica, il _runtime di_ `ZIO` non è in grado di interrompere blocchi di codice importato che racchiude _side effect_. Ad esempio, considerando un programma che stampa i numeri compresi tra `1` e `100000`:
 ```scala
 val myEffect: UIO[Unit] =
   UIO.succeed {
@@ -201,7 +201,7 @@ In questo caso, `doSomething` verrà sicuramente eseguito all'interno di `execut
 
 Anche per quanto riguarda la concorrenza, `ZIO` offre diversi operatori che permettono di astrarre dagli aspetti legati alle _fiber_, al fine di supportare il programmatore durante lo sviluppo di programmi concorrenti. Le funzioni di base sono `raceEither` e `zipPar`, entrambe rappresentano delle operazioni binarie che combinano due valori:
 
-- `zipPar`: permette di eseguire due _effect_ (`self` e `that`) parallelamente, restituendo al termine i risultato di entrambi; 
+- `zipPar`: permette di eseguire due _effect_ (`self` e `that`) parallelamente, restituendo al termine i risultati di entrambi; 
 - `raceEither`: equivalente a `zipPar` ma il risultato restituito è quello del primo _effect_ che termina con successo. Il secondo, cioè quello ancora in esecuzione, sarà interrotto poiché non più necessario.
 
 ```scala
@@ -388,7 +388,7 @@ Tramite il parametro `fiberId` di `interruptAs` è possibile specificare la _fib
 
 ## Strutture concorrenti: Queue - Work distribution
 
-Similmente ad una `Promise`, una `Queue` consente alle _fiber_ di sospendersi al fine di attendere l'inserimento o l'estrazione di un valore della coda. A differenza della prima, la `Queue` permette di gestire molteplici valori, infatti il suo scopo principale è quello di distribuire del lavoro tra le _fiber_. Ovviamente la struttura garantisce un accesso sicuro ai valori in caso di concorrenza.
+Similmente ad una `Promise`, una `Queue` consente alle _fiber_ di sospendersi al fine di attendere l'inserimento o l'estrazione di un valore della coda. A differenza della prima, la `Queue` permette di gestire molteplici valori; infatti il suo scopo principale è quello di distribuire del lavoro tra le _fiber_. Ovviamente la struttura garantisce un accesso sicuro ai valori in caso di concorrenza.
 
 Le operazioni fondamentali di una `Queue` sono `offer` e `take`:
 ```scala
@@ -471,7 +471,7 @@ object Hub {
     ???
 }
 ``` 
-Idealmente, questo tipo di `Hub` può essere rappresentato tramite un vettore contenente i valori da comunicare. Ogni _consumer_ richiede i valori utilizzato l'indice preventivamente assegnatoli, quando tutti i _consumer_ hanno letto lo stesso valore, quest'ultimo viene rimosso dal vettore. Un `Hub` di tipo _bounded_ è la soluzione di default perché:
+Idealmente, questo tipo di `Hub` può essere rappresentato tramite un vettore contenente i valori da comunicare. Ogni _consumer_ è associato, tramite indice, a una specifica posizione del vettore. Un certo valore `x` inserito all'interno della struttura, verrà rimosso solo quando tutti i _consumer_ lo avranno letto. Un `Hub` di tipo _bounded_ è la soluzione di default perché:
 
 - garantisce che ogni _consumer_ riceva ogni valore pubblicato, quindi i valori non verranno mai scartati;
 - previene problemi di _memory leaks_ causati da un _producer_ troppo veloce rispetto ai _consumer_;
@@ -509,7 +509,7 @@ sealed trait Hub[A] {
   def toQueue: Enqueue[A]
 }
 ```
-Proprio come una `Queue`, anche l'`Hub` può essere chiuso (`shutdown`) causando l'interruzione immediata di qualsiasi _fiber_ che tenterà di inserire o ricevere tramite sottoscrizione un valore dalla struttura. Inoltre è possibile conoscere il numero di messaggi presenti all'interno dell'`Hub` sfruttando l'operatore `size`. Infine la funzione `toQueue` consente di interagire con la struttura come se fosse una coda su cui è possibile solo scrivere. 
+Proprio come una `Queue`, anche l'`Hub` può essere chiuso (`shutdown`) causando l'interruzione immediata di qualsiasi _fiber_ che tenterà di inserire o ricevere, tramite sottoscrizione, un valore dalla struttura. Inoltre è possibile conoscere il numero di messaggi presenti all'interno dell'`Hub` sfruttando l'operatore `size`. Infine la funzione `toQueue` consente di interagire con la struttura come se fosse una coda su cui è possibile solo scrivere. 
 
 
 ## Strutture concorrenti: Semaphore - Work limiting

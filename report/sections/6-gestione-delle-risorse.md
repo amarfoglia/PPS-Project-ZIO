@@ -30,7 +30,7 @@ object ZIO {
     ???
 }
 ```
-Il parametro `acquire` descrive l'acquisizione di una certa risorsa `A`, mentre `use` definisce la produzione di un certo risultato `B` a partire dalla risorsa `A` acquisita. Infine `release` consente il rilascio della risorsa, e come si evince dalla firma, non prevede fallimenti.
+Il parametro `acquire` descrive l'acquisizione di una certa risorsa `A`, mentre `use` definisce la produzione di un certo risultato `B` a partire dalla risorsa `A` acquisita. Infine `release` consente il rilascio della risorsa e, come si evince dalla firma, non prevede fallimenti.
 
 L'operatore `acquireReleaseWith` fornisce le seguenti garanzie:
 
@@ -68,7 +68,7 @@ lazy val analyzeData: Task[Unit] =
 ```
 La soluzione proposta è corretta ma impone un ordine sulla gestione delle risorse che rende impossibile una loro acquisizione in parallelo impattando negativamente sulle prestazioni. Inoltre nel caso di numerose acquisizioni si andrebbero a creare tanti livelli innestati, difficilmente gestibili.
 
-I problemi appeni citati possono essere evitati adottando un approccio più dichiarativo, che consenta di combinare le risorse creandone una nuova, la quale descriva l'acquisizione e il rilascio di entrambe. La funzione di ZIO `acquireRelease` permette di fare ciò separando le operazioni di rilascio e acquisizione, dalla logica di utilizzo della risorsa. 
+I problemi appena citati possono essere evitati adottando un approccio più dichiarativo, che consenta di combinare le risorse creandone una nuova, la quale descriva l'acquisizione e il rilascio di entrambe. La funzione di ZIO `acquireRelease` permette di fare ciò separando le operazioni di rilascio e acquisizione, dalla logica di utilizzo della risorsa. 
 ```scala
 def acquireRelease[R, E, A](
   acquire: ZIO[R, E, A]

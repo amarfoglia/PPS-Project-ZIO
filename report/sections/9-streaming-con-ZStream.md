@@ -89,7 +89,7 @@ def fromList[A](list: List[A]): ZStream[Any, Nothing, A] =
 ```
 All'operatore `unfold` si aggiunge la variante `unfoldZIO` che consente di valutare un _effect_ all'interno di `f`.
 
-Infine `ZStream` permette di integrare del codice di libreria Java, nello specifico `java.nio` e `java.util.stream`. Di seguito vengono presentati alcuni esempi applicativi.
+Infine `ZStream` permette di integrare codice di libreria Java, nello specifico `java.nio` e `java.util.stream`. Di seguito vengono presentati alcuni esempi applicativi.
 ```scala
 val stream: ZStream[Any, IOException, Byte] = 
   ZStream.fromInputStream(new FileInputStream("file.txt"))

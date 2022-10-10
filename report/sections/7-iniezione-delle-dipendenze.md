@@ -33,7 +33,7 @@ Indipendentemente dal metodo utilizzato, una volta recuperato un certo servizio 
 
 Inoltre, tramite `R` è possibile fare riferimento a un servizio non ancora disponibile all'interno dell'_effect_, così che la sua implementazione possa essere posticipata fino all'atto di esecuzione. Quest'ultima può essere fornita avvalendosi dell'operatore `provideEnvironment`, che concettualmente rimuove le dipendenze introdotte da `environment`.
 
-Generalmente l'_environment_ viene utilizzato all'interno delle librerie `ZIO` per rappresentare una funzionalità valida localmente, cioè che può essere eliminata alla chiusura dell'_environment_. Un esempio concreto è chiaramente lo `Scope`; solitamente un'applicazione si compone di tanti `Scope` così da garantire il _principio di singola responsabilità_.
+Generalmente l'_environment_ viene utilizzato all'interno delle librerie `ZIO` per rappresentare una funzionalità valida localmente, che può cioè essere eliminata alla chiusura dell'_environment_. Un esempio concreto è chiaramente lo `Scope`; solitamente un'applicazione si compone di tanti `Scope` così da garantire il _principio di singola responsabilità_.
 
 ## The Onion architecture
 

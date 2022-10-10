@@ -62,7 +62,7 @@ def printLine(line: String) =
 val echo =
   readLine.flatMap(line => printLine(line))
 ```
-L'operatore `flatMap` è fondamentale perché cattura il modo in cui le istruzioni vengono eseguite in un programma procedurale. Questa relazione consente di tradurre un qualsiasi programma procedurale in un `ZIO` _effect_, avvolgendo ogni istruzione all'interno di un costruttore come `ZIO.attempt` e concatenando questi attraverso la `flatMap`. Infine grazie la ***for comprehension*** di `Scala`, è possibile raggiungere lo stesso potere espressivo della programmazione procedurale. Il programma precedente può essere riscritto come segue:
+L'operatore `flatMap` è fondamentale perché cattura il modo in cui le istruzioni vengono eseguite in un programma procedurale. Questa relazione consente di tradurre un qualsiasi programma procedurale in uno `ZIO` _effect_, avvolgendo ogni istruzione all'interno di un costruttore come `ZIO.attempt` e concatenando questi attraverso la `flatMap`. Infine grazie alla ***for comprehension*** di `Scala`, è possibile raggiungere lo stesso potere espressivo della programmazione procedurale. Il programma precedente può essere riscritto come segue:
 ```scala
 import zio._
 
@@ -215,7 +215,7 @@ val echoZIO: Task[Unit] = for {
 
 ### Computazioni pure
 
-`ZIO` fornisce una varietà di costruttori per convertire _valori puri_ in `ZIO` _effect_. Questi trovano impiego quando è necessario combinare del _codice puro_ con degli _effect_ che racchiudo _side effects_. I due costruttori più importanti di questa categoria sono `succeed` e `fail`:
+`ZIO` fornisce una varietà di costruttori per convertire _valori puri_ in `ZIO` _effect_. Questi trovano impiego quando è necessario combinare _codice puro_ con degli _effect_ che racchiudono _side effects_. I due costruttori più importanti di questa categoria sono `succeed` e `fail`:
 ```scala
 object `ZIO` {
   def fail[E](e: => E): ZIO[Any, E, Nothing] = ???
@@ -230,7 +230,7 @@ Ovviamente i costruttori più importanti sono quelli per la gestione delle compu
 
 #### ZIO.attempt
 
-Il costruttore `ZIO.attempt` permette di convertire del codice procedurale in uno `ZIO` _effect_ che cattura i _side effects_, posticipandone la valutazione. Ogni eccezione generata viene convertita in uno `ZIO.fail`. Questo costruttore trova spesso impiego in caso di codice _legacy_ che potrebbe produrre delle eccezioni. 
+Il costruttore `ZIO.attempt` permette di convertire codice procedurale in uno `ZIO` _effect_ che cattura i _side effects_, posticipandone la valutazione. Ogni eccezione generata viene convertita in uno `ZIO.fail`. Questo costruttore trova spesso impiego in caso di codice _legacy_ che potrebbe produrre delle eccezioni. 
 
 L'utilizzo di `ZIO.attempt` è limitato poiché: assume che il codice da convertire sia sincrono, non è in grado di gestire tipi di dato che ne contengono altri (es. `Future[A]`) e, fallendo con qualsiasi tipologia di `Throwable`, non permette una gestione degli errori a grana fine. `ZIO` permette comunque di gestire i casi appena citati tramite costruttori ad-hoc. Ad esempio, è possibile modellare un _effect_ che non prevede fallimenti, tramite la direttiva `ZIO.succeed`.
 

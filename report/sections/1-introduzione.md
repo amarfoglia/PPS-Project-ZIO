@@ -8,7 +8,7 @@
 - ***resource-safety***: `ZIO` gestisce automaticamente il ciclo di vita (acquisizione e rilascio) delle risorse anche in presenza di fallimenti inaspettati e in contesti di concorrenza. Inoltre `ZIO` è _stack-safe_, quindi permette un ampio utilizzo della ricorsione.
 - ***streaming***: `ZIO` dispone di uno _streaming_ potente, efficiente e concorrente, in grado di lavorare con qualsiasi sorgente di dati;
 - **risoluzione dei problemi**: `ZIO` cattura qualsiasi errore e per ciascuno fornisce un _trace_ di esecuzione utile all'attività di _debugging_;
-- **testabilità**: tramite l'_inferenza delle dipendenze_, `ZIO` favorisce lo sviluppo di interfacce la cui concretizzazione è dettata dal contesto di utilizzo.
+- **testabilità**: tramite _dependency inference_, `ZIO` favorisce lo sviluppo di interfacce la cui concretizzazione è dettata dal contesto di utilizzo.
 
 `ZIO` non è l'unica scelta possibile per la programmazione concorrente in Scala. Infatti tra le principali si ricorda:
 

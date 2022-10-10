@@ -12,10 +12,10 @@ Lo sviluppo di applicazioni complesse comporta una gestione degli errori altrett
 
 Seguendo un'approccio imperativo, quando si presenta uno stato non valido, viene lanciata un'eccezione che deve essere gestita tramite `try`/`catch`. Nel caso dichiarativo gli errori diventano dei valori, quindi non è necessario avvalersi delle eccezioni interrompendo il flusso del programma. Questo secondo approccio genera diversi benefici:
 
-- _referential transparency_: quando viene lanciata un'eccezione, la trasparenza referenziale viene meno. Mentre un approccio di gestione degli errori dichiarativo rende indipendente il comportamento del programma dalla posizione in cui vengono valutate le diverse espressioni;
+- _referential transparency_: quando viene lanciata un'eccezione, la trasparenza referenziale viene meno. Al contrario, un approccio di gestione degli errori dichiarativo rende indipendente il comportamento del programma dalla posizione in cui vengono valutate le diverse espressioni;
 - _type safety_: il tracciamento del tipo dell'errore lungo gli _effect_, abilita il compilatore a prevenire la scrittura di codice _unsafe_ e permette di disinteressarsi degli aspetti implementativi;
 - _exhaustive checking_: nel caso di `try` e `catch`, il compilatore non ha un ruolo attivo nella gestione degli errori, quindi non è possibile sviluppare _total function_[^7];
-- _error model_: il modello di errore basato sulle istruzioni `try`/`catch`/`finally` non consente di catturare multiple eccezioni, andando così a perderebbe del contenuto informativo.
+- _error model_: il modello di errore basato sulle istruzioni `try`/`catch`/`finally` non consente di catturare multiple eccezioni, andando così a perdere del contenuto informativo.
 
 [^7]: funzione definita per tutti i valori del dominio.
 
@@ -136,7 +136,7 @@ Questo permette di definire un programma equivalente evitando il controllo del d
 def divide(a: Int, b: Int): ZIO[Any, Nothing, Int] =
   ZIO.succeed(a / b)
 ```
-Questo esempio è a sostegno della filosofia _let it crash_, poiché ogni eccezione in un `ZIO` _effect_ viene tradotta automaticamente in un `ZIO` _defect_, può essere sensato non gestire l'errore favorendo la semplicità del codice. Nonostante questo sia l'approccio di default, esistono situazioni in cui è opportuno gestire i _defect_, per esempio in un sistema di _logging_. `ZIO` fornisce una famiglia di operatori in grado di gestire i _defect_ in aggiunta alle _failure_. Tra questi si ricorda `sandbox`: espone l'intera causa di fallimento all'interno del canale di errore dell'_effect_.
+Questo esempio è a sostegno della filosofia _let it crash_; poiché ogni eccezione in un `ZIO` _effect_ viene tradotta automaticamente in un `ZIO` _defect_, può essere sensato non gestire l'errore favorendo la semplicità del codice. Nonostante questo sia l'approccio di default, esistono situazioni in cui è opportuno gestire i _defect_, per esempio in un sistema di _logging_. `ZIO` fornisce una famiglia di operatori in grado di gestire i _defect_ in aggiunta alle _failure_. Tra questi si ricorda `sandbox`: espone l'intera causa di fallimento all'interno del canale di errore dell'_effect_.
 ```scala
 trait ZIO[-R, +E, +A] {
   def sandbox: ZIO[R, Cause[E], A]
@@ -220,7 +220,7 @@ val result: ZIO[Any, ::[String], Nothing] =
 
 ## Combinare Effects
 
-Quando si tenta di combinare due _effect_ tramite operatori come `zip`, il tipo di errore risultate sarà quello più specifico come supertipo di entrambi. Per esempio, considerando il codice sottostante, la combinazione di `callApi` e `queryDb` produrrà un _effect_ cha ha come _success type_ la coppia dei valori dei primi due, e come errore la superclasse `Exception`.
+Quando si tenta di combinare due _effect_ tramite operatori come `zip`, il tipo di errore risultate sarà il supertipo più specifico  di entrambi. Per esempio, considerando il codice sottostante, la combinazione di `callApi` e `queryDb` produrrà un _effect_ cha ha come _success type_ la coppia dei valori dei primi due, e come errore la superclasse `Exception`.
 ```scala
 final case class ApiError(message: String)
   extends Exception(message)
