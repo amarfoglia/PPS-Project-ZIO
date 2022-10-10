@@ -10,7 +10,6 @@
 rootProject.name = "pps-project-zio"
 
 include("snippets")
-include("zio-chat")
 
 plugins {
     id("com.gradle.enterprise") version "3.11.1"
