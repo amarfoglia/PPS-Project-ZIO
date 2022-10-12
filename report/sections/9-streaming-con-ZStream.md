@@ -19,22 +19,23 @@ trait ZStream[-R, +E, +O] {
   def process: ZIO[R with Scope, Option[E], Chunk[O]]
 }
 ```
-`ZStream` può essere visto come la rappresentazione _funzionale_ di una collezione di valori potenzialmente infinita, che nella programmazione _imperativa_ corrisponde a un `Iterator`.
+`ZStream` può essere visto come la rappresentazione _funzionale_ di una collezione di valori potenzialmente infinita, che nella _programmazione imperativa_ viene rappresentata da un `Iterator`. Questa concettualizzazione consente di interfacciarsi con gli `ZStream` tramite operatori con cui si ha una certa familiarità come
+`filter`, `map`, `zip`, `groupBy`, poiché facenti parte libreria delle collezioni di Scala.
 
 ## Costruzione di Stream
 
 Uno dei costruttori più semplici è `fromIterable`, che genera lo _stream_ a partire dai valori di un `Iterable`. 
 ```scala
-lazy val stream: ZStream[Any, Nothing, Int] =
+lazy val stream: UStream[Int] =
   ZStream.fromIterable(List(1, 2, 3, 4, 5))
 ```
 In questo caso gli _stream_ prodotti sono piuttosto banali perché forniscono un set di valori finito e non coinvolgono _effect_. 
 
 Un altro costruttore interessante è `fromZIO`, il quale permette di definire _stream_ con un solo elemento. Quest'ultimo però è un _effect_, che gestito all'interno del contesto dello _stream_ può essere combinato con altri. 
 ```scala
-val helloStream: ZStream[Any, Nothing, Unit] =
+val hello: UStream[Unit] =
   ZStream.fromZIO(Console.printLine("Hello").orDie) ++
-  ZStream.fromZIO(Console.printLine("World!").orDie) ++
+    ZStream.fromZIO(Console.printLine("World!").orDie)
 ```
 
 Nel caso di una funzione asincrona, sfruttando il metodo `ZStream.async` è possibile realizzare uno _stream_ che viene alimentato con i risultati di una specifica _callback_.
@@ -47,7 +48,7 @@ def registerCallback(
 ): Unit = ???
 
 // Lifting an Asynchronous API to ZStream
-val stream = ZStream.async[Any, Throwable, Int] { cb =>
+ZStream.async[Any, Throwable, Int] { cb =>
   registerCallback(
     "foo",
     event => cb(ZIO.succeed(Chunk(event))),
@@ -91,14 +92,45 @@ All'operatore `unfold` si aggiunge la variante `unfoldZIO` che consente di valut
 
 Infine `ZStream` permette di integrare codice di libreria Java, nello specifico `java.nio` e `java.util.stream`. Di seguito vengono presentati alcuni esempi applicativi.
 ```scala
-val stream: ZStream[Any, IOException, Byte] = 
+val s1: ZStream[Any, IOException, Byte] = 
   ZStream.fromInputStream(new FileInputStream("file.txt"))
 
-val stream: ZStream[Any, IOException, Byte] =
+val s2: ZStream[Any, IOException, Byte] =
   ZStream.fromResource("file.txt")
 
-val stream: ZStream[Any, Throwable, Int] = 
+val s3: ZStream[Any, Throwable, Int] = 
   ZStream.fromJavaStream(java.util.stream.Stream.of(1, 2, 3))
+```
+
+### Resourceful Stream
+
+Oltre agli operatori appena presentati, ne esistono altri che consentono di creare _stream_ _resource-safe_ a partire da una risorsa. Un primo esempio è `ZStream.acquireReleaseWith`, il quale permette al programmatore generare uno _stream_ specificando la logica di acquisizione e di rilascio della risorsa che lo alimenta. 
+```scala
+val lines: ZStream[Any, Throwable, String] =
+  ZStream
+    .acquireReleaseWith(
+      ZIO.attempt(Source.fromResource("stream_test.txt")) // acquire
+    )(b => ZIO.succeed(b.close)) // release
+    .flatMap(b => ZStream.fromIterator(b.getLines))
+```
+Nell'esempio proposto, viene definito uno _stream_ sfruttando come sorgente le linee del `BufferedSource` specificato all'interno della funzione di `acquire`; inoltre la risorsa acquisita verrà automaticamente chiusa al termine del flusso.
+
+Infine, `ZStream` fornisce altri due operatori fondamentali per la corretta gestione delle risorse: `finalizer` e `ensuring`. Entrambi consento di definire azioni eseguite automaticamente rispettivamente prima e dopo la terminazione dello _stream_. L'esempio sottostante rappresenta un possibile caso d'uso degli operatori, in cui vi è la creazione e conseguente rimozione di una cartella temporanea. 
+```scala
+def application: ZStream[Any, IOException, Unit] =
+  ZStream.fromZIO(
+    ZIO.attempt(Files.createDirectory(Path.of("tmp")))
+      .mapError(IOException(_)) *> ZIO.unit
+  )
+
+def deleteDir(dir: Path): ZIO[Any, IOException, Unit] =
+  ZIO.attempt(Files.delete(dir))
+    .mapError(IOException(_))
+
+val dirApp: ZStream[Any, IOException, Any] =
+  application ++ ZStream.finalizer(
+    deleteDir(Path.of("tmp")).orDie
+  ).ensuring(ZIO.debug("Doing some other works..."))
 ```
 
 ## Esecuzione degli Stream
@@ -115,8 +147,8 @@ ZStream.fromIterable(0 to 100).foreach(printLine(_))
 
 Un altro operatore è il classico `fold` che riduce gli elementi dello _stream_ attraverso la funzione passata, e restituisce un _effect_ `ZIO` contenente il risultato.
 ```scala
-val s1 = ZStream(1, 2, 3, 4, 5).runFold(0)(_ + _)
-val s2 = ZStream.iterate(1)(_ + 1).runFoldWhile(0)(_ <= 5)(_ + _)
+val s4 = ZStream(1, 2, 3, 4, 5).runFold(0)(_ + _)
+val s5 = ZStream.iterate(1)(_ + 1).runFoldWhile(0)(_ <= 5)(_ + _)
 ```
 
 Infine a questi si aggiunge `ZSink`[^9], che può essere rappresentato come una funzione che riceve in input un numero variabile di elementi e che produce un solo valore in uscita. 
@@ -125,3 +157,66 @@ val sum: UIO[Int] = ZStream(1,2,3).run(ZSink.sum)
 ```
 
 [^9]: Per approfondire: [https://zio.dev/zsink](https://zio.dev/reference/stream/zsink/)
+
+## Gestione degli errori
+
+Uno `ZStream` può fallire durante la sua esecuzione e nel caso di _failure_, tramite gli operatori `orElse` e `catchAll`, è possibile avviare una procedura di recupero che consiste nell'esecuzione di un nuovo _stream_ che prenderà il posto di quello originale. 
+```scala
+val s1 = ZStream(1, 2, 3) ++ ZStream.fail("MyError") ++ ZStream(4, 5)
+val s2 = ZStream(7, 8, 9)
+
+val s3 = s1.orElse(s2) // Output: 1, 2, 3, 7, 8, 9
+
+val s4 = s1.catchAll {
+  case "MyError" => s2
+} // Output: 1, 2, 3, 6, 7, 8
+```
+L'operatore `catchAll` è più potente di `orElse` perché consente di scegliere l'azione di _recovery_ in base al valore ritornato dalla _failure_.
+
+Nel caso di _defects_, si deve utilizzare il metodo `catchAllCause`; facendo riferimento all'esempio precedente: `s1.catchAllCause(_ => s2)`. Inoltre, tramite l'operatore `onError`, è possibile fornire uno _ZIO effect_ che verrà eseguito in caso di errore.
+
+Infine sfruttando il metodo `retry`, e fornendo uno `Schedule`, è possibile ripetere l'esecuzione di uno _stream_ che è terminato a causa di un fallimento. Di seguito viene presentato un possibile caso d'uso dell'operatore. 
+```scala
+ZStream.fromZIO(
+  Console.print("Enter a number: ") *> Console.readLine
+    .flatMap(
+      _.toIntOption match
+        case Some(value) => ZIO.succeed(value)
+        case None        => ZIO.fail("NaN")
+    )
+)
+.retry(Schedule.exponential(1.second))
+```
+
+## SubscriptionRef
+
+Una `SubscriptionRef[A]` è una `Ref` a cui è possibile sottoscriversi per ricevere il valore corrente e tutte le sue successive modifiche come elementi di uno _stream_. La struttura consente di modellare uno stato condiviso a cui diversi osservatori si registrano per reagire prontamente ai suoi cambianti. 
+```scala
+trait SubscriptionRef[A] extends Ref.Synchronized[A]:
+  def changes: ZStream[Any, Nothing, A]
+  def make[A](a: A): UIO[SubscriptionRef[A]]
+```
+`SubscriptionRef` è in linea con la _programmazione reattiva_, infatti la struttura può rappresentare una parte dello stato dell'applicazione i cui aggiornamenti si riflettono su vari componenti dell'interfaccia utente.
+
+Si consideri il programma sottostante, alle funzioni `server` e `client` viene passata in input la stessa `SubscriptionRef` che nel primo caso viene vista come una semplice `Ref`, mentre nel secondo come uno `ZStream`. La funzione `server` aggiorna continuamente la `ref` e indirettamente emette dei nuovi valori nello _stream_ dei cambiamenti, i quali vengono poi consumati da uno specifico `client`.
+```scala
+def server(ref: Ref[Long]): UIO[Nothing] =
+  ref.update(_ + 1).forever
+
+def client(changes: UStream[Long]): UIO[Chunk[Long]] =
+  for
+    n     <- Random.nextLongBetween(1, 200)
+    chunk <- changes.take(n).runCollect
+  yield chunk
+
+val program = 
+  for
+    ref    <- SubscriptionRef.make(0L)
+    server <- server(ref).fork
+    chunk  <- client(ref.changes)
+    _      <- server.interrupt
+  yield chunk
+```
+
+
+

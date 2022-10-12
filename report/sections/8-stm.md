@@ -41,7 +41,7 @@ def transfer(
 La logica è corretta perché se la variabile transazionale `from` venisse modificata, la transazione fallirebbe causando il ripristino delle variabili ai valori originali, e l'intera transazione verrebbe rieseguita automaticamente.
 
 In alcuni casi potrebbe essere necessario astrarre dalla logica STM, a tal proposito `ZIO` fornisce l'operatore `commit`: converte una transazione in un _effect_. Sfruttando la funzione `commit` è possibile ristrutturare il codice precedente in modo da migliorarne la leggibilità lato chiamante.
-```scala
+<!-- ```scala
 final class Balance private (
   private val value: TRef[Int]
 ) { self =>
@@ -58,6 +58,30 @@ final class Balance private (
     } yield ()
     transaction.commit
   }
+}
+``` -->
+```scala
+final case class Balance private(private val value: TRef[Int]) { self =>
+  def transfer(that: Balance, amount: Int): Task[Int] =
+    val transaction: STM[Throwable, Int] =
+      for
+        senderBalance  <- value.get
+        currentBalance <- if (amount > senderBalance)
+                            STM.fail(Throwable("insufficient funds"))
+                          else self.value.update(_ - amount) *>
+                            that.value.update(_ + amount) *> 
+                              self.value.get
+      yield currentBalance
+    transaction.commit
+
+  def autoDebit(amount: Int): USTM[Int] =
+    for
+      balance        <- value.get
+      currentBalance <- if (balance >= amount)
+                          self.value.update(_ - amount) *>
+                            self.value.get
+                        else STM.retry
+    yield currentBalance
 }
 ```
 
@@ -86,14 +110,13 @@ val arbitraryEffect: UIO[Unit] =
 In questo caso, il tentativo di esecuzione della transazione visualizzerà su _console_ il messaggio `"Running"`. Ad ogni suo fallimento verrà riproposta la stessa stampa, provocando una differenza osservabile tra il tentativo iniziale e quelli successivi. Questo non consente di ragionare sulla logica delle transazioni senza conoscere a priori il numero di tentativi. Di conseguenza, non è possibile svolgere istruzioni concorrenti all'interno di una transazione STM, però le transazioni possono essere eseguite in maniera concorrente.
 ```scala
 for {
-  alice    <- TRef.make(100).commit
-  bob      <- TRef.make(100).commit
-  carol    <- TRef.make(100).commit
-  transfer1 = transfer(alice, bob, 30).commit
-  transfer2 = transfer(bob, carol, 40).commit
-  transfer3 = transfer(carol, alice, 50).commit
-  transfers = List(transfer1, transfer2, transfer3)
-  _        <- ZIO.collectAllParDiscard(transfers)
+    b1        <- Balance.make(110)
+    b2        <- Balance.make(150)
+    transfer1  = b1.transfer(b2, 100)
+    debit      = b1.autoDebit(100).commit
+    transfer2  = b2.transfer(b1, 100)
+    results   <- ZIO.collectAllPar(Vector(transfer1, debit, transfer2))
+    _         <- Console.printLine(results)  // (10, 10, 50)
 } yield ()
 ```
 
@@ -167,15 +190,29 @@ Una `TPriorityQueue` è equivalente a una classica coda, fatta eccezione per la 
 
 Uno scenario d'uso può essere una coda di eventi, i cui elementi sono associati a un _timestamp_ utilizzato per implementare la politica di ordinamento. 
 ```scala
-final case class Event(time: Int, action: UIO[Unit])
-object Event {
-  implicit val EventOrdering: Ordering[Event] =
-    Ordering.by(_.time)
-}
+final case class Event(time: Long, name: String, action: UIO[Unit])
 
-for {
-  queue <- TPriorityQueue.empty[Event]
-} yield queue
+object Event:
+  implicit val EventOrdering: Ordering[Event] = 
+    Ordering.by(_.time)
+
+  def dummy(name: String) =
+    Clock.currentTime(TimeUnit.MILLISECONDS)
+      .map(Event(_, name, ZIO.unit))
+
+object Main extends ZIOAppDefault:
+  import STMPriorityQueue._
+
+  val program = for
+    queue  <- TPriorityQueue.empty[Event].commit
+    e1     <- Event.dummy("Event 1")
+    e2     <- Event.dummy("Event 2")
+    _      <- queue.offer(e2).commit
+    _      <- queue.offer(e1).commit
+    result <- queue.take.commit // it always takes e1
+  yield result
+
+  val run = program.flatMap(ZIO.debug(_))
 ```
 
 Una `PriorityQueue` supporta le tipiche operazioni che ci si aspetta da una coda: `offer`, `offerAll`, `take`, `takeAll`, `takeUpTo`, `peek` e `size`.
@@ -254,14 +291,13 @@ Attraverso il metodo `transfer` è possibile richiedere agilmente il _lock_ di d
 
 Come si evince dal nome, un `TSemaphore` è la variante del tipo di dato `Semaphore` valida nel contesto transazionale. Tramite `TSemaphore` è possibile realizzare una politica di controllo con la quale comporre altri _effect_ transazionali. Di seguito viene proposto un esempio in cui l'acquisizione e il rilascio del permesso fanno parte della stessa transazione. 
 ```scala
-import zio._
-import zio.stm._
+def dummySTMAction: STM[Nothing, Unit] = STM.unit
 
 val tSemaphoreWithPermit: IO[Nothing, Unit] =
-  for {
-    sem <- TSemaphore.make(1L).commit
-    a   <- sem.withPermit(yourSTMAction.commit)
-  } yield a
+  for
+    sem    <- TSemaphore.make(1L).commit
+    result <- sem.withPermit(dummySTMAction.commit)
+  yield result
 ```
 
 Un `TSemaphore` altro non è che un `TRef` che racchiude un valore `Long` che indica il numero di permessi disponibili. Similmente a quanto accade per un semaforo di ZIO, per acquisire un permesso si deve prima verificare che il valore del contatore sia maggiore di zero, e nel caso lo si decrementa di uno. Il rilascio di un permesso invece, implica l'incremento del contatore.
