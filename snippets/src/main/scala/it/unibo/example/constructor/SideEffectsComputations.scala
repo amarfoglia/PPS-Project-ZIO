@@ -1,4 +1,4 @@
-package it.unibo.example.constructors
+package it.unibo.example.constructor
 
 import zio.{Task, ZIO}
 

@@ -1,8 +1,8 @@
-package it.unibo.zio
+package it.unibo.example
 
 object UnsafeDelayedExecution extends App {
   import scala.util.Random
-  import java.util.concurrent.{ Executors, ScheduledExecutorService }
+  import java.util.concurrent.{Executors, ScheduledExecutorService}
   import java.util.concurrent.TimeUnit._
 
   val printRandomNumber: Unit = {

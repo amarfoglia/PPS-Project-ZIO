@@ -1,4 +1,4 @@
-package it.unibo.zio.concurrency
+package it.unibo.example.concurrency
 
 import zio.*
 

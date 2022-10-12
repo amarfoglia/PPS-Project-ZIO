@@ -1,4 +1,4 @@
-package it.unibo.zio.resource
+package it.unibo.example.resource
 
 import zio.*
 

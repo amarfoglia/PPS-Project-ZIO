@@ -1,4 +1,4 @@
-package it.unibo.zio.error
+package it.unibo.example.error
 
 import zio.*
 

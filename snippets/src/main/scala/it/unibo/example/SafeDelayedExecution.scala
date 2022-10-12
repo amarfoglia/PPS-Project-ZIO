@@ -1,4 +1,4 @@
-package it.unibo.zio
+package it.unibo.example
 
 import scala.util.Random as ScalaRandom
 

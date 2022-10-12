@@ -1,4 +1,4 @@
-package it.unibo.zio.composition
+package it.unibo.example.composition
 
 import java.io.IOException
 import scala.collection.immutable.AbstractSeq

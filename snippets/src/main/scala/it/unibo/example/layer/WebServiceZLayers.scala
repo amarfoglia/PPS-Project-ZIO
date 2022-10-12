@@ -1,4 +1,4 @@
-package it.unibo.zio.layer
+package it.unibo.example.layer
 
 import zio.{Chunk, ZIO, ZLayer}
 

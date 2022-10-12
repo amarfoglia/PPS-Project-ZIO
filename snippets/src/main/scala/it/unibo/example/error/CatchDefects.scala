@@ -1,6 +1,6 @@
-package it.unibo.zio.error
+package it.unibo.example.error
 
-import it.unibo.zio.error.CatchDefects.Sandbox
+import it.unibo.example.error.CatchDefects.Sandbox
 import zio.*
 import java.io.IOException
 

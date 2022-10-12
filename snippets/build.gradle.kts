@@ -19,6 +19,7 @@ repositories {
 dependencies {
     implementation(libs.scala.library)
     implementation(libs.zio)
+    implementation(libs.zio.streams)
     testImplementation(libs.bundles.scala.test)
     testImplementation(libs.bundles.zio.test)
     testRuntimeOnly(libs.scala.xml)

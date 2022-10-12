@@ -1,4 +1,4 @@
-package it.unibo.zio.composition
+package it.unibo.example.composition
 
 import zio._
 

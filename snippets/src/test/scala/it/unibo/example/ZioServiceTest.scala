@@ -1,4 +1,4 @@
-package it.unibo.zio
+package it.unibo.example
 
 import org.junit.runner.RunWith
 import zio.*
