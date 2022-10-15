@@ -8,3 +8,4 @@ input-files:
   - ./report/sections/7-iniezione-delle-dipendenze.md
   - ./report/sections/8-stm.md
   - ./report/sections/9-streaming-con-ZStream.md
+  - ./report/sections/10-chat-app-demo.md
