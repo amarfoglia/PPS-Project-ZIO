@@ -4,7 +4,7 @@ Allo scopo di mettere in pratica i concetti approfonditi nelle sezioni precedent
 
 L'API del servizio si compone principalmente di tre sorgenti dati: la lista delle stanze, il numero degli utenti connessi ad una specifica stanza ed i messaggi scambiati. Le ultime due vengono generate solo a seguito della selezione di una stanza. 
 
-![application streams\label{stream-pattern}](img/main-streams.png "Modello dell'API basato su _stream_.")
+![Rappresentazione grafica degli _stream_ dell'API.\label{stream-pattern}](https://raw.githubusercontent.com/amarfoglia/PPS-Project-ZIO/main/report/sections/img/main-streams.png "Rappresentazione grafica degli _stream_ dell'API.")
 
 Come mostrato nell'immagine \ref{stream-pattern}, per ogni _client_ connesso si andranno a creare diversi canali, ognuno adibito allo scambio di determinati messaggi. 
 
@@ -23,7 +23,7 @@ trait Controller:
 ```
 La funzione `subscribe` descrive la sottoscrizione di un nuovo utente al servizio e implementa un canale addetto all'invio dell'elenco delle stanze disponibili. Allo stesso modo `subscribeRoom` permette di definire un nuovo flusso di dati contenente le informazioni relative a una determinata stanza: messaggi e numero di utenti connessi. Infine `handleClientCommand` abilita il _client_ all'invio di specifici comandi che determinano la modifica dello stato dell'applicazione con conseguente generazione di nuovi eventi. Inoltre, essendo gli _stream_ di `ZIO` di tipo _pull based_, è sufficiente che il _client_ interrompa la comunicazione per impedire al flusso associato di emettere nuovi dati.
 
-![application streams\label{messages}](img/messages.png "Modello dei messaggi di dominio")
+![Modello dei messaggi di dominio.\label{messages}](https://raw.githubusercontent.com/amarfoglia/PPS-Project-ZIO/main/report/sections/img/messages.png "Modello dei messaggi di dominio.")
 
 Scendendo a un livello più implementativo, per favorire una maggiore separazione delle responsabilità, le funzionalità sono state suddivise in tre interfacce distinte: 
 
@@ -166,4 +166,4 @@ Come già anticipato, il `frontend` è stato sviluppato in `Scala.js`, nel detta
 
 Infine, lo sviluppo della UI è stato facilitato dalla libreria [`scalatags`](https://com-lihaoyi.github.io/scalatags/), la quale ha permesso di definire programmaticamente alcuni componenti HTML agevolando l'integrazione di questi con la logica di business.
 
-![GUI\label{gui}](img/gui.png "UI della Demo.")
+![UI della demo.\label{gui}](https://raw.githubusercontent.com/amarfoglia/PPS-Project-ZIO/main/report/sections/img/gui.png "UI della demo.")
