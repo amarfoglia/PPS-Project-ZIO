@@ -29,58 +29,45 @@ def transfer(
   to: TRef[Int],
   amount: Int
 ): STM[Throwable, Unit] =
-  for {
+  for
     senderBalance <- from.get
-    _             <- if (amount > senderBalance)
-                      STM.fail(new Throwable("insufficient funds"))
-                    else
-                      from.update(_ - amount) *>
-                        to.update(_ + amount)
-  } yield ()
+    _ <-
+      if (amount > senderBalance)
+        STM.fail(new Throwable("insufficient funds"))
+      else
+        from.update(_ - amount) *>
+          to.update(_ + amount)
+  yield ()
 ```
 La logica è corretta perché se la variabile transazionale `from` venisse modificata, la transazione fallirebbe causando il ripristino delle variabili ai valori originali, e l'intera transazione verrebbe rieseguita automaticamente.
 
 In alcuni casi potrebbe essere necessario astrarre dalla logica STM, a tal proposito `ZIO` fornisce l'operatore `commit`: converte una transazione in un _effect_. Sfruttando la funzione `commit` è possibile ristrutturare il codice precedente in modo da migliorarne la leggibilità lato chiamante.
-<!-- ```scala
-final class Balance private (
-  private val value: TRef[Int]
-) { self =>
-  def transfer(that: Balance, amount: Int): Task[Unit] = {
-    val transaction: STM[Throwable, Unit] = for {
-      senderBalance <- value.get
-      _             <- if (amount > senderBalance)
-                        STM.fail(
-                          new Throwable("insufficient funds")
-                        )
-                       else
-                          self.value.update(_ - amount) *>
-                            that.value.update(_ + amount)
-    } yield ()
-    transaction.commit
-  }
-}
-``` -->
+
 ```scala
-final case class Balance private(private val value: TRef[Int]) { self =>
+final case class Balance private (val value: TRef[Int]) { self =>
+
   def transfer(that: Balance, amount: Int): Task[Int] =
     val transaction: STM[Throwable, Int] =
       for
         senderBalance  <- value.get
-        currentBalance <- if (amount > senderBalance)
-                            STM.fail(Throwable("insufficient funds"))
-                          else self.value.update(_ - amount) *>
-                            that.value.update(_ + amount) *> 
-                              self.value.get
+        currentBalance <-
+          if (amount > senderBalance)
+            STM.fail(Throwable("insufficient funds"))
+          else
+            self.value.update(_ - amount) *>
+              that.value.update(_ + amount) *>
+                self.value.get
       yield currentBalance
     transaction.commit
 
   def autoDebit(amount: Int): USTM[Int] =
     for
-      balance        <- value.get
-      currentBalance <- if (balance >= amount)
-                          self.value.update(_ - amount) *>
-                            self.value.get
-                        else STM.retry
+      balance <- value.get
+      currentBalance <-
+        if (balance >= amount)
+          self.value.update(_ - amount) *>
+            self.value.get
+        else STM.retry
     yield currentBalance
 }
 ```
@@ -109,15 +96,15 @@ val arbitraryEffect: UIO[Unit] =
 ```
 In questo caso, il tentativo di esecuzione della transazione visualizzerà su _console_ il messaggio `"Running"`. Ad ogni suo fallimento verrà riproposta la stessa stampa, provocando una differenza osservabile tra il tentativo iniziale e quelli successivi. Questo non consente di ragionare sulla logica delle transazioni senza conoscere a priori il numero di tentativi. Di conseguenza, non è possibile svolgere istruzioni concorrenti all'interno di una transazione STM, però le transazioni possono essere eseguite in maniera concorrente.
 ```scala
-for {
-    b1        <- Balance.make(110)
-    b2        <- Balance.make(150)
-    transfer1  = b1.transfer(b2, 100)
-    debit      = b1.autoDebit(100).commit
-    transfer2  = b2.transfer(b1, 100)
-    results   <- ZIO.collectAllPar(Vector(transfer1, debit, transfer2))
-    _         <- Console.printLine(results)  // (10, 10, 50)
-} yield ()
+for
+  b1        <- Balance.make(110)
+  b2        <- Balance.make(150)
+  transfer1  = b1.transfer(b2, 100)
+  debit      = b1.autoDebit(100).commit
+  transfer2  = b2.transfer(b1, 100)
+  results   <- ZIO.collectAllPar(Vector(transfer1, debit, transfer2))
+  _         <- Console.printLine(results)  // (10, 10, 50)
+yield ()
 ```
 
 Il limite appena proposto può essere superato nel caso di:

@@ -309,8 +309,12 @@ object Console {
 Il _System service_ mette a disposizione funzionalità in grado di recuperare variabili d'ambiente e di sistema. In questo caso i metodi principali possono essere riassunti in `env` (abilita l'accesso alle variabili d'ambiente), e `property` (consente di accedere ad una proprietà di sistema):
 ```scala
 object System {
-  def env(variable: String): ZIO[System, SecurityException, Option[String]]
-  def property(prop: String): ZIO[System, Throwable, Option[String]]
+  def env(
+    variable: String
+  ): ZIO[System, SecurityException, Option[String]]
+  def property(
+    prop: String
+  ): ZIO[System, Throwable, Option[String]]
 }
 ```
 

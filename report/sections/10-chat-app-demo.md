@@ -4,7 +4,7 @@ Allo scopo di mettere in pratica i concetti approfonditi nelle sezioni precedent
 
 L'API del servizio si compone principalmente di tre sorgenti dati: la lista delle stanze, il numero degli utenti connessi ad una specifica stanza ed i messaggi scambiati. Le ultime due vengono generate solo a seguito della selezione di una stanza. 
 
-![Rappresentazione grafica degli _stream_ dell'API.\label{stream-pattern}](https://raw.githubusercontent.com/amarfoglia/PPS-Project-ZIO/main/report/sections/img/main-streams.png "Rappresentazione grafica degli _stream_ dell'API.")
+![Rappresentazione grafica degli _stream_ dell'API.\label{stream-pattern}](https://raw.githubusercontent.com/amarfoglia/PPS-Project-ZIO/main/report/sections/img/main_streams.png "Rappresentazione grafica degli _stream_ dell'API.")
 
 Come mostrato nell'immagine \ref{stream-pattern}, per ogni _client_ connesso si andranno a creare diversi canali, ognuno adibito allo scambio di determinati messaggi. 
 
@@ -110,19 +110,16 @@ object Main extends ZIOAppDefault:
   val program = for
     _ <- Console.printLine("Starting server")
     _ <- Server.start(8091, app)
-  yield ExitCode.success
+  yield ExitCode.success    
 
-  val server = 
-    program.provide(
-        Controller.live,
-        Auth.live,
-        Lobby.live,
-        Chat.live,
-        Repository.inMemory[RoomId, Domain.Room](Config(path = "rooms.json")),
-        Repository.inMemory[UserId, User](Config(path = "users.json")),
-      )
-
-  val run = server.fork *> ZIO.never
+  val run = program.provide(
+    Controller.live,
+    Auth.live,
+    Lobby.live,
+    Chat.live,
+    Repository.inMemory[RoomId, Room](Config(path = "rooms.json")),
+    Repository.inMemory[UserId, User](Config(path = "users.json")),
+  ) *> ZIO.never
 ```
 
 ### Gestione della concorrenza
@@ -130,8 +127,8 @@ object Main extends ZIOAppDefault:
 Siccome il server è in grado di comunicare con diversi _client_, le interazioni sono state regolate mediante le strutture concorrenti offerte da `ZIO`, al fine di evitare la presenza di stati inconsistenti. Nel caso specifico della gestione dei messaggi, il servizio `Chat` è stato dotato di un campo `messageHubs`, cioè di una `Ref` che mantiene in memoria un `Hub` per ciascuna stanza. La `Ref` esclude _race conditions_ durante l'aggiunta e/o rimozione di stanze, mentre l'`Hub` permette di notificare a tutti gli interessati l'arrivo di nuovi messaggi (strategia _broadcast_).
 ```scala
 case class ChatLive(
-  private val roomRepository: RoomRepository,
-  private val messageHubs: Ref.Synchronized[Map[RoomId, Hub[Message]]]
+  val roomRepository: RoomRepository,
+  val messageHubs: Ref.Synchronized[Map[RoomId, Hub[Message]]]
 ) extends Chat:
   // ...
 

@@ -31,9 +31,9 @@ object ExampleSpec extends ZIOSpecDefault {
       ZIO.succeed(1 + 1).map(n => assert(n)(equalTo(2)))
     },
     test("testing an effect using a for comprehension") {
-      for {
+      for
         n <- ZIO.succeed(1 + 1)
-      } yield assert(n)(equalTo(2))
+      yield assert(n)(equalTo(2))
     }
   )
 }
@@ -54,9 +54,11 @@ Un'altra caratteristica rilevante è la possibilità di passare come argomento d
 object ExampleSpec extends ZIOSpecDefault {
   def spec = suite("ExampleSpec")(
     test("fails") {
-      for {
-        exit <- ZIO.attempt(1 / 0).catchAll(_ => ZIO.fail(())).exit
-      } yield assert(exit)(fails(isUnit)) // isUnit = equalTo(())
+      for
+        exit <- ZIO.attempt(1 / 0)
+                   .catchAll(_ => ZIO.fail(()))
+                   .exit
+      yield assert(exit)(fails(isUnit)) // isUnit = equalTo(())
     }
   )
 }

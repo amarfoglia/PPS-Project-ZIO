@@ -82,7 +82,8 @@ object MainApp extends ZIOAppDefault {
 L'esecuzione di tali _effect_ produrrà in output il seguente _stack trace_:
 ```bash
 timestamp=2022-03-08T17:55:50.002161369Z level=ERROR 
-  thread=#zio-fiber-0 message="Exception in thread 'zio-fiber-2' java.lang.String: Oh uh! at <empty>.MainApp.run(MainApp.scala:4)"
+  thread=#zio-fiber-0 message="Exception in thread 'zio-fiber-2'
+  java.lang.String: Oh uh! at <empty>.MainApp.run(MainApp.scala:4)"
 ```
 
 Le _failure_ possono essere catturate e recuperate efficacemente tramite l'operatore `catchAll`:
@@ -95,8 +96,10 @@ trait ZIO[-R, +E, +A] {
 Un esempio di utilizzo che include un _match cases_ esaustivo:
 ```scala
 sealed trait AgeValidationException extends Exception
-case class NegativeAgeException(age: Int) extends AgeValidationException
-case class IllegalAgeException(age: Int) extends AgeValidationException
+case class NegativeAgeException(age: Int)
+  extends AgeValidationException
+case class IllegalAgeException(age: Int)
+  extends AgeValidationException
 
 def validate(age: Int): ZIO[Any, AgeValidationException, Int] =
   if (age < 0)
@@ -126,7 +129,7 @@ import zio._
 
 def divide(a: Int, b: Int): ZIO[Any, Nothing, Int] =
   if (b == 0)
-    ZIO.die(new ArithmeticException("divide by zero")) // Unexpected error
+    ZIO.die(new ArithmeticException("divide by zero"))
   else
     ZIO.succeed(a / b)
 ```
@@ -156,11 +159,13 @@ effect            // ZIO[Any, String, String]
 Anche per i _defect_ `ZIO` offre delle operazioni di cattura.
 ```scala
 trait ZIO[-R, +E, +A] {
-  def catchAllDefect[R1 <: R, E1 >: E, A1 >: A]
-    (h: Throwable => ZIO[R1, E1, A1]): ZIO[R1, E1, A1]
+  def catchAllDefect[R1 <: R, E1 >: E, A1 >: A](
+    h: Throwable => ZIO[R1, E1, A1]
+  ): ZIO[R1, E1, A1]
 
-  def catchSomeDefect[R1 <: R, E1 >: E, A1 >: A]
-    (pf: PartialFunction[Throwable, ZIO[R1, E1, A1]]): ZIO[R1, E1, A1]
+  def catchSomeDefect[R1 <: R, E1 >: E, A1 >: A](
+    pf: PartialFunction[Throwable, ZIO[R1, E1, A1]]
+  ): ZIO[R1, E1, A1]
 }
 ```
 Siccome i _defect_ sono errori non previsti, la regola base è quella di catturarli allo scopo di tracciarne il contenuto e non di effettuare operazioni di recupero.
