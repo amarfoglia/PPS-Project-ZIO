@@ -1,6 +1,6 @@
 # Demo: chat app
 
-Allo scopo di mettere in pratica i concetti approfonditi nelle sezioni precedenti, è stata sviluppata un'applicazione di messaggistica basata su _stream_. L'idea è quella di un servizio che permette agli utenti di accedere a delle stanze e scambiare messaggi. Le diverse entità interagiscono tramite flussi di eventi regolamentati da un protocollo di comunicazione che consente di filtrare gli eventi in entrata (`ClientCommand`) da quelli di uscita (`ServerCommand`).
+Allo scopo di mettere in pratica i concetti approfonditi nelle sezioni precedenti, è stata sviluppata un'applicazione di messaggistica basata su _stream_. L'idea è quella di un servizio che permette agli utenti sia di accedere a delle stanze che scambiare messaggi. Le diverse entità interagiscono tramite flussi di eventi regolamentati da un protocollo di comunicazione che consente di filtrare gli eventi in entrata (`ClientCommand`) da quelli di uscita (`ServerCommand`).
 
 L'API del servizio si compone principalmente di tre sorgenti dati: la lista delle stanze, il numero degli utenti connessi ad una specifica stanza ed i messaggi scambiati. Le ultime due vengono generate solo a seguito della selezione di una stanza. 
 

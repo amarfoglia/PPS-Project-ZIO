@@ -13,7 +13,7 @@
 `ZIO` non è l'unica scelta possibile per la programmazione concorrente in Scala. Infatti tra le principali si ricorda:
 
 - **Akka[^1]**: _toolkit_ maturo che comprende un ricco ecosistema orientato alla produttività. Rispetto a `ZIO` non fornisce lo stesso livello di diagnostica e non prevede una forte analisi degli errori a tempo di compilazione che rendono `ZIO` completamente testabile;
-- **Monix[^2]**: libreria per la composizione di programmi asincroni, non è in grado di fornire lo stesso potere espressivo di ZIO;
+- **Monix[^2]**: libreria per la composizione di programmi asincroni, non è in grado di fornire lo stesso potere espressivo di `ZIO`;
 - **Cats Effects[^3]**: _runtime system_ puramente funzionale. Rispetto a `ZIO` è più focalizzata sul concetto di _tagless-final_ che sulla programmazione concorrente e non prevede un supporto per la composizione delle transazioni.
 
 [^1]: Per dettagli: [https://akka.io/](https://akka.io/)

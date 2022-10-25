@@ -20,7 +20,7 @@ trait ZStream[-R, +E, +O] {
 }
 ```
 `ZStream` può essere visto come la rappresentazione _funzionale_ di una collezione di valori potenzialmente infinita, che nella _programmazione imperativa_ viene rappresentata da un `Iterator`. Questa concettualizzazione consente di interfacciarsi con gli `ZStream` tramite operatori con cui si ha una certa familiarità come
-`filter`, `map`, `zip`, `groupBy`, poiché facenti parte libreria delle collezioni di Scala.
+`filter`, `map`, `zip`, `groupBy`, poiché facenti parte della libreria delle collezioni di Scala.
 
 ## Costruzione di Stream
 
@@ -104,7 +104,7 @@ val s3: ZStream[Any, Throwable, Int] =
 
 ### Resourceful Stream
 
-Oltre agli operatori appena presentati, ne esistono altri che consentono di creare _stream_ _resource-safe_ a partire da una risorsa. Un primo esempio è `ZStream.acquireReleaseWith`, il quale permette al programmatore generare uno _stream_ specificando la logica di acquisizione e di rilascio della risorsa che lo alimenta. 
+Oltre agli operatori appena presentati, ne esistono altri che consentono di creare _stream_ _resource-safe_ a partire da una risorsa. Un primo esempio è `ZStream.acquireReleaseWith`, il quale permette al programmatore di generare uno _stream_ specificando la logica di acquisizione e di rilascio della risorsa che lo alimenta. 
 ```scala
 val lines: ZStream[Any, Throwable, String] =
   ZStream
@@ -115,7 +115,7 @@ val lines: ZStream[Any, Throwable, String] =
 ```
 Nell'esempio proposto, viene definito uno _stream_ sfruttando come sorgente le linee del `BufferedSource` specificato all'interno della funzione di `acquire`; inoltre la risorsa acquisita verrà automaticamente chiusa al termine del flusso.
 
-Infine, `ZStream` fornisce altri due operatori fondamentali per la corretta gestione delle risorse: `finalizer` e `ensuring`. Entrambi consento di definire azioni eseguite automaticamente rispettivamente prima e dopo la terminazione dello _stream_. L'esempio sottostante rappresenta un possibile caso d'uso degli operatori, in cui vi è la creazione e conseguente rimozione di una cartella temporanea. 
+Infine, `ZStream` fornisce altri due operatori fondamentali per la corretta gestione delle risorse: `finalizer` e `ensuring`. Entrambi consentono di definire azioni eseguite automaticamente rispettivamente prima e dopo la terminazione dello _stream_. L'esempio sottostante rappresenta un possibile caso d'uso degli operatori, in cui vi è la creazione e conseguente rimozione di una cartella temporanea. 
 ```scala
 def application: ZStream[Any, IOException, Unit] =
   ZStream.fromZIO(

@@ -7,13 +7,15 @@ table-of-contents: true
 toc-depth: 3
 number-sections: true
 top-level-division: chapter
+cite-method: biblatex
 filters:
   - pandoc-crossref
 
 metadata:
-  title: ZIO
+  title: "ZIO: componibilità e type safety a supporto della programmazione concorrente e asincrona"
   subtitle: PPS Report
   lang: it-IT
+  bibliography: mybib.bib
   author:
     - Alberto Marfoglia
   autoSectionLabels: true
