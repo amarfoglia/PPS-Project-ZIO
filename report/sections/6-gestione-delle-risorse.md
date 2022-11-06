@@ -20,7 +20,6 @@ Questa tecnica è valida nel contesto sincrono, ma presenta delle falle in quell
 La funzione `acquireReleaseWith` permette di gestire tutte le fasi del ciclo di vita di una risorsa in unico punto, così che non si verifichino stati incoerenti. 
 
 ```scala
-import zio._
 object ZIO {
   def acquireReleaseWith[R, E, A, B](
     acquire: ZIO[R, E, A]

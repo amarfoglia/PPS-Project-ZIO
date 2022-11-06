@@ -76,7 +76,7 @@ object ZStream {
     ZStream[Any, Nothing, A] = ???
 }
 ```
-Il parametro `s` rappresenta uno stato iniziale, mentre `f` una funzione che verrà applicata a `s` per produrre i risultati in uscita. Questi possono essere due tipi:
+Il parametro `s` rappresenta uno stato iniziale, mentre `f` una funzione che verrà applicata a `s` per produrre i risultati in uscita. Questi possono essere di due tipi:
 
 - `None`: causerà la terminazione dello _stream_;
 - `A`: il valore prodotto diventerà il nuovo stato `s`, valido per la computazione successiva.

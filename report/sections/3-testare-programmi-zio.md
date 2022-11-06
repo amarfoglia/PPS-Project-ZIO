@@ -1,6 +1,6 @@
 # ZIO Test
 
-Come già anticipato, `ZIO` consente di sviluppare programmi complessi in maniera incrementale sfruttando la _componibilità_ degli _effect_. Questo è possibile solo se i singoli componenti rispettano le garanzie sul comportamento previsto. Adottando unicamente _ScalaTest_, durante l'implementazione di codice di verifica, non è possibile avvalersi di tutti i vantaggi derivanti dalle caratteristiche di `ZIO`. A tal proposito nasce **`ZIO Test`**, cioè una libreria in grado di trattare i test come _effect_. 
+Come già anticipato, `ZIO` consente di sviluppare programmi complessi in maniera incrementale sfruttando la componibilità degli _effect_. Questo è possibile solo se i singoli componenti rispettano le garanzie sul comportamento previsto. Adottando unicamente _ScalaTest_, durante l'implementazione di codice di verifica, non è possibile avvalersi di tutti i vantaggi derivanti dalle caratteristiche di `ZIO`. A tal proposito nasce **`ZIO Test`**, cioè una libreria in grado di trattare i test come _effect_. 
 ```scala
 type ZTest[-R, +E] = ZIO[R, TestFailure[E], TestSuccess]
 ```
@@ -230,7 +230,7 @@ Detto ciò, la costruzione di un _property based test_ si struttura su tre parti
 - uno o più valori di tipo `Gen` con i quali passare le distribuzioni di valori;
 - un'`assertion` che riceve in input i valori generati.
 
-Anche per i generatori supportano gran parte degli operatori di `ZIO`. Tra questi si ricorda `map` che permette di applicare una certa funzione a tutti i valori generati; per motivi di efficienza è preferibile "trasformare" i generatori (`map`) piuttosto che filtrarli. 
+Anche per i generatori supportano gran parte degli operatori di `ZIO`. Tra questi si ricorda `map` che permette di applicare una certa funzione a tutti i valori generati; per motivi di efficienza è preferibile "trasformare" i generatori piuttosto che filtrarli. 
 
 Ad esempio, sfruttando l'operatore `map` è possibile trasformare un generatore di numeri, che opera nell'intervallo da `1` a `100`, in uno che gestisce solo numeri pari.
 ```scala

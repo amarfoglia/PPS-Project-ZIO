@@ -1,6 +1,6 @@
 # ZIO Error Model
 
-Lo sviluppo di applicazioni complesse comporta una gestione degli errori altrettanto complicata, poiché queste possono fallire in svariati modi. Solamente un forte ed adeguato utilizzo del _type system_ di Scala permette di raggiungere elevati cannoni di robustezza e resilienza delle applicazioni.
+Lo sviluppo di applicazioni complesse comporta una gestione degli errori altrettanto complicata, poiché queste possono fallire in svariati modi. Solamente un forte ed adeguato utilizzo del _type system_ di Scala permette di raggiungere elevati canoni di robustezza e resilienza delle applicazioni.
 
 `ZIO` definisce tre possibili tipologie di fallimento:
 
@@ -65,7 +65,7 @@ Un _effect_ di tipo `ZIO[R, E, A]` può terminare correttamente con un valore di
 
 ## Gestione delle Failure
 
-Tramite `ZIO` è possibile modellare una _failure_ tramite il costruttore `fail`.
+In `ZIO` è possibile modellare una _failure_ tramite il costruttore `fail`.
 ```scala
 trait ZIO {
   def fail[E](error: => E): ZIO[Any, E, Nothing]

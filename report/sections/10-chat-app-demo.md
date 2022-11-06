@@ -60,7 +60,7 @@ object Controller:
 
 Siccome il tipo `ZLayer` è analogo a una funzione `RIn => Either[E, ROut]`, questo può essere composto sia verticalmente che orizzontalmente con altri _layer_. Infatti l'output degli `ZLayer` di `Auth`, `Chat`, `Lobby` viene composto in uno più "complesso" (composizione orizzontale), e passato come input, cioè dipendenza, del _layer_ di `Controller` (composizione verticale).
 
-L'ultimo "strato" dell'applicativo è il servizio denominato `Server`, il quale implementa concretamente i canali di comunicazione con i _client_ sfruttando apposite _Websocket_. Per lo sviluppo del servizio si è adoperata la libreria `zio-http`. Questa ha permesso di costruire agilmente un sever Http che realizza una rotta per la registrazione di un nuovo utente, e due _Websocket_ a supporto degli _stream_ di dati. 
+L'ultimo "strato" dell'applicativo è il servizio denominato `Server`, il quale implementa concretamente i canali di comunicazione con i _client_ sfruttando apposite _Websocket_. Per lo sviluppo del servizio si è adoperata la libreria `zio-http`. Questa ha permesso di costruire agilmente un server http che realizza una rotta per la registrazione di un nuovo utente, e due _Websocket_ a supporto degli _stream_ di dati. 
 
 ```scala
 val app: Http[Controller, Throwable, Request, Response] =

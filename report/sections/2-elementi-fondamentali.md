@@ -169,7 +169,7 @@ final case class ZIO[-R, +E, +A](run: R => Either[E, A]) { self =>
     ZIO(_ => self.run(r))
 }
 
-object `ZIO` {
+object ZIO {
   def environment[R]: ZIO[R, Nothing, R] =
     ZIO(r => Right(r))
 }
@@ -217,7 +217,7 @@ val echoZIO: Task[Unit] = for {
 
 `ZIO` fornisce una varietà di costruttori per convertire _valori puri_ in `ZIO` _effect_. Questi trovano impiego quando è necessario combinare _codice puro_ con degli _effect_ che racchiudono _side effects_. I due costruttori più importanti di questa categoria sono `succeed` e `fail`:
 ```scala
-object `ZIO` {
+object ZIO {
   def fail[E](e: => E): ZIO[Any, E, Nothing] = ???
   def succeed[A](a: => A): ZIO[Any, Nothing, A] = ???
 }
@@ -238,7 +238,7 @@ L'utilizzo di `ZIO.attempt` è limitato poiché: assume che il codice da convert
 
 Lavorare direttamente con del codice asincrono basato su _callbacks_ può essere problematico poiché può portare ad elevati livelli di codice innestato, che complicano la propagazione dei valori e rendono quasi impossibile la gestione delle risorse in maniera sicura. A tal proposito, tramite il costruttore `ZIO.async`, è possibile convertire porzioni di codice asincrono in _effect_.
 ```scala
-object `ZIO` {
+object ZIO {
   def async[R, E, A](
     cb: (ZIO[R, E, A] => Unit) => Any
   ): ZIO[R, E, A] =

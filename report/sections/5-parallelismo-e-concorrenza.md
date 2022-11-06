@@ -8,7 +8,7 @@ Il supporto di ZIO per il parallelismo e la concorrenza si basa sul modello _Fib
 
 Quando viene chiamato il metodo `unsafeRun`, il runtime di `ZIO` delega l'esecuzione del programma a una `Fiber` che opera all'interno di uno specifico `Executor` (realizzato tramite un _thread pool_). La scelta dell'`Executor` consente di definire la modalità di interruzione delle _fiber_ e di modellare una logica che garantisca il rispetto della proprietà di _fairness_.
 
-Inoltre, una _fiber_ non può determinare a priori il _thread_ che la eseguirà, infatti questo può cambiare a _runtime_, soprattutto nel caso di attività di lunga durata, può cambiare.
+Inoltre, una _fiber_ non può determinare a priori il _thread_ che la eseguirà, infatti questo può cambiare a _runtime_, soprattutto nel caso di attività di lunga durata.
 
 ### Operazioni principali
 
@@ -311,7 +311,7 @@ def log(ref: FiberRef[Log])(string: String): UIO[Unit] =
     _ <- Console.printLine(log.toString)
   } yield ()
 ```
-`Tree` è una struttura dati che permette di catturare l'albero delle _fiber_ create, anche in maniera ricorsiva, la cui variabile `head` rappresenta un _log_ di una specifica _fiber_. Una volta eseguito il programma, sarà generato un albero composto da tre nodi: un padre e due figli. Ques'ultimi inseriranno reciprocamente nel _log_ `"Got1"`, `"Got2"` e `"Got3"`, `"Got4"`. 
+`Tree` è una struttura dati che permette di catturare l'albero delle _fiber_ create, anche in maniera ricorsiva, la cui variabile `head` rappresenta un _log_ di una specifica _fiber_. Una volta eseguito il programma, sarà generato un albero composto da tre nodi: un padre e due figli. Questi ultimi inseriranno reciprocamente nel _log_ `"Got1"`, `"Got2"` e `"Got3"`, `"Got4"`. 
 
 ## Strutture concorrenti: Promise - Work synchronization
 
@@ -451,7 +451,7 @@ Come intuibile dal nome, `isShutdown` verifica se la coda è stata chiusa, mentr
 
 Una classe di problema meno diffusa rispetto a quella di distribuzione del lavoro, è il _broadcasting_: ogni valore comunicato deve essere ricevuto da tutti i _consumer_. La soluzione di `ZIO` a tale problema, è la struttura dati `Hub`, la quale assegna ad ogni _consumer_ uno specifico indice, così che i _consumer_ accedano a posizioni distinte della struttura. Un `Hub` è definito in termini di due operazioni fondamentali:
 
-- `publish`: similmente a a quanto succede con il metodo `offer` di `Queue`, la funzione consente di pubblicare un valore all'interno della struttura;
+- `publish`: similmente a quanto succede con il metodo `offer` di `Queue`, la funzione consente di pubblicare un valore all'interno della struttura;
 - `subscribe`: permette di ottenere i valori che attraversano l'`Hub` sotto forma di `Dequeue`. I _consumer_ continueranno a ricevere valori fintanto che sono sottoscritti.
 
 ```scala

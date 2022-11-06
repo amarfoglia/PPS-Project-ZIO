@@ -33,7 +33,7 @@ Indipendentemente dal metodo utilizzato, una volta recuperato un certo servizio 
 
 Inoltre, tramite `R` è possibile fare riferimento a un servizio non ancora disponibile all'interno dell'_effect_, così che la sua implementazione possa essere posticipata fino all'atto di esecuzione. Quest'ultima può essere fornita avvalendosi dell'operatore `provideEnvironment`, che concettualmente rimuove le dipendenze introdotte da `environment`.
 
-Generalmente l'_environment_ viene utilizzato all'interno delle librerie `ZIO` per rappresentare una funzionalità valida localmente, che può cioè essere eliminata alla chiusura dell'_environment_. Un esempio concreto è chiaramente lo `Scope`; solitamente un'applicazione si compone di tanti `Scope` così da garantire il _principio di singola responsabilità_.
+Generalmente l'_environment_ viene utilizzato all'interno delle librerie `ZIO` per rappresentare una funzionalità valida localmente, che può cioè essere eliminata alla chiusura dell'_environment_. Un esempio concreto è chiaramente lo `Scope`; solitamente un'applicazione si compone di tanti _scope_ così da garantire il _principio di singola responsabilità_.
 
 ## The Onion architecture
 
@@ -43,7 +43,7 @@ Un altro caso d'uso dell'_environment_ può essere la definizione delle dipenden
 - ***Github API logic***: descrive come la _business logic_ possa essere tradotta nel dominio dell'API di Github;
 - ***http logic***: implementa la logica relativa alla creazione di una richiesta http e alla gestione dei risultati. Solitamente a questo livello si adottano librerie esterne come `zio-http`. 
 
-Se non ci fosse una netta suddivisione tra i livelli sopra elencati, un eventuale modifica alla _business logic_ provocherebbe un effetto a cascata che renderebbe l'attività di _refactoring_ ardua e pericolosa (introduzione di _bug_). Inoltre, la mancata suddivisione delle responsabilità inficerebbe sia sullo sviluppo di test nel dettaglio, sia sulla produttività dei _team_ poiché impossibilitati a lavorare indipendentemente.
+Se non ci fosse una netta suddivisione tra i livelli sopra elencati, un'eventuale modifica alla _business logic_ provocherebbe un effetto a cascata che renderebbe l'attività di _refactoring_ ardua e pericolosa (introduzione di _bug_). Inoltre, la mancata suddivisione delle responsabilità inficerebbe sia sullo sviluppo di test nel dettaglio, sia sulla produttività dei _team_ poiché impossibilitati a lavorare indipendentemente.
 
 La soluzione è la _Onion architecture_, la cui idea di base è rappresentare ciascuno di questi "strati" come un servizio a se stante. Seguendo l'analogia del nome, la _business logic_ si trova al centro dell'architettura e viene progressivamente tradotta, dagli strati superiori, in qualcosa di più vicino al "mondo esterno".
 
